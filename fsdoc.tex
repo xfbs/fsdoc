@@ -1,5 +1,10 @@
 \documentclass[a4paper]{article}
 \usepackage[utf8]{inputenc}
+\usepackage{fontspec}
+\setsansfont{CMU Sans Serif}
+\setmainfont{CMU Serif}
+\setmonofont{CMU Typewriter Text}
+
 \usepackage{booktabs}
 \usepackage{xcolor}
 \usepackage{listings}
@@ -16,10 +21,18 @@
   citecolor={blue!60!black},
   urlcolor={blue!60!black}
 ]{hyperref}
+\usepackage{glossaries-extra}
 
 \title{Filesystems}
 \author{Patrick M. Elsen <pelsen@xfbs.net>}
 \date{\today}
+
+\setabbreviationstyle{long-short-sc}
+\newabbreviation{fat}{fat}{File Allocation Table}
+\newabbreviation{ntfs}{ntfs}{New Technology File System}
+\makeglossaries
+
+
 
 \begin{document}
 
@@ -66,15 +79,15 @@ The \textsc{ext} family of filesystems derive from the \verb|minix| filesystem, 
 
 \subsection{\textsc{fat} family}
 
-The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \textsc{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \textsc{fat} is still used today, for example required by the SD Consortium.
+The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \gls{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium.
 
 \subsection{\textsc{ntfs}}
 
-The \verb|ntfs| is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate file streams}.
+The \gls{ntfs} is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate file streams}.
 
 \section{File Hierachy}
 
-In the UNIX world, the filesystem starts at the path \verb|/|. This is also called the \emph{root}. In this root, a number of directories typically exist, such as \verb|usr|, \verb|dev|, \verb|var|, \verb|bin|, and so forth.
+In the \textsc{unix} world, the filesystem starts at the path \verb|/|. This is also called the \emph{root}. In this root, a number of directories typically exist, such as \verb|usr|, \verb|dev|, \verb|var|, \verb|bin|, and so forth.
 
 \begin{verbatim}
 $ ls /
@@ -84,6 +97,8 @@ proc sbin sys   var
 \end{verbatim}
 
 Every entry in the file hiearchy has an \emph{inode} number associated with it, uniquely identifying the file (entry).
+
+\subsection{File Hiearchy Standard}
 
 \section{Entries}
 
@@ -161,9 +176,17 @@ Files can be created with the \verb|open()| sycall with the \verb|O_CREAT| flag,
 
 \subsection{Symbolic Link}
 
-Symbolic links are essentially files containing paths 
+Symbolic links are essentially files containing paths to the real file. When opening them, they act as a proxy to the real file. 
 
+Syscalls used for creating and reading symbolic links are \verb|symlink()| and \verb|readlink()|.
 
+\subsection{Character Device}
+
+\subsection{Block Device}
+
+\subsection{FIFO Queue}
+
+\subsection{Socket}
 
 \section{Permissions}
 
@@ -215,5 +238,6 @@ cat: file: Permission denied
 
 \subsection{Sticky bit}
 
+\printglossaries
 
 \end{document}
