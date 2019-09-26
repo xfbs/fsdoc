@@ -1,3 +1,11 @@
 .texpadtmp
 *.pdf
+*.aux
+*.out
+*.log
+*.gls
+*.glo
+*.ist
+*.toc
+*.glg
 src/perms
