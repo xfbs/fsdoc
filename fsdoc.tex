@@ -1,0 +1,216 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage{syntax}
+\usepackage{amsmath}
+\usepackage[super]{nth}
+\usepackage{tikz}
+\usepackage{tikz-qtree}
+\usetikzlibrary{shapes,patterns,positioning,trees}
+\usepackage[
+  colorlinks,
+  linkcolor={red!40!black},
+  citecolor={blue!60!black},
+  urlcolor={blue!60!black}
+]{hyperref}
+
+\title{Filesystems}
+\author{Patrick M. Elsen <pelsen@xfbs.net>}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+
+Filesystems have always been fascinating to me. They are a kind of ubiquitous database. A lot of work goes into developing and making them work. And yet, a lot of information about them is relatively unknown. In this article, I set forth to explore some of their features.
+
+We will look at what kinds of filesystems exist in the Linux kernel, and how they differ. We will look at the API that is presented to the user. We will also explore some advanced filesystem features and even implement our own little FS with FUSE.
+
+All that is required for following along is a bit of experience with the Linux command line. MacOS also works, but has a slightly different set of features that are also addressed. Windows users may want to install WSL, but we will also take a look at some Windows-specific quirks.
+
+\section{History}
+
+UNIX as an operating system took the concept of a file system and really took it to the next level. The idea was that \emph{everything} could be a file. We see this today by some of the well-known character devices such as \verb|/dev/null| or \verb|/dev/urandom|, which we can accesses using the filesystem metaphor, but aren't files on disk in the typical sense.
+
+DOS, the predecessor of the popular Windows operating system, had a comparatively limited concept of a file system. Initially, it did not support hierarchies, meaning that there were no folders, and file names were limited to just 11 characters. As personal computers became more powerful, this put DOS at a disadvantage, which resulted in them fixing it, but it still leaves some cruft in the Windows world. For example, Windows has no folder like UNIX’es \verb|/dev|, but device files are present in any directory.
+
+\section{Filesystems}
+
+Filesystems define how the structures we can work with (directories, files) and their metadata are stored on disk. As such, they are implemented in the kernel. 
+
+Finding out what filesystem is in use can be accomplished with the \emph{stat} command.
+
+\begin{verbatim}
+$ stat -f /
+  File: "/"
+    ID: a34c153af3f0097e Namelen: 255     Type: ext2/ext3
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 40605120   Free: 35164744   Available: 35160648
+Inodes: Total: 20643840   Free: 20461918
+\end{verbatim}
+
+In this case, we learn that the filesystem in use is from the \textsc{ext} family of filesystems, with a 4K block size.
+
+The most common filesystem used on Linux is \verb|ext4|, but there are plenty others. Filesystems supported by Linux are \verb|ext|, \verb|ext2|, \verb|ext3|, \verb|ext4|, \verb|hpfs|, \verb|iso9660|, \verb|JFS|, \verb|minix|, \verb|msdos|, \verb|ncpfs nfs|, \verb|ntfs|, \verb|proc|, \verb|Reiserfs|, \verb|smb|, \verb|sysv|, \verb|umsdos|, \verb|vfat|, \verb|XFS|, \verb|xiafs|.
+
+\subsection{\textsc{ext} family}
+
+The \textsc{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth.
+
+\subsection{\textsc{fat} family}
+
+The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \textsc{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \textsc{fat} is still used today, for example required by the SD Consortium.
+
+\subsection{\textsc{ntfs}}
+
+The \verb|ntfs| is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate file streams}.
+
+\section{File Hierachy}
+
+In the UNIX world, the filesystem starts at the path \verb|/|. This is also called the \emph{root}. In this root, a number of directories typically exist, such as \verb|usr|, \verb|dev|, \verb|var|, \verb|bin|, and so forth.
+
+\begin{verbatim}
+$ ls /
+bin  etc  lib64  mnt  run  tmp  boot   home 
+lib  opt  root   src  usr  dev  lib32  media 
+proc sbin sys   var
+\end{verbatim}
+
+Every entry in the file hiearchy has an \emph{inode} number associated with it, uniquely identifying the file (entry).
+
+\section{Entries}
+
+A filesystem contains \emph{entries}. Every entry has a unique \emph{inode} associated with it. There are different kinds of entries. The most well-known entry types are \emph{regular files} and \emph{directories}. 
+
+Using the \emph{stat} syscall, we can ask the kernel about information on an entry. The \emph{stat} bash command performs this syscall for us and returns the information in a readable way, including the type of an entry\footnote{For more information on this sycall, check \texttt{man 7 inode} and \texttt{man 2 stat}.}.
+
+\begin{verbatim}
+$ stat ~/.bashrc
+  File: /home/patrick/.bashrc
+  Size: 3771            Blocks: 8          IO Block: 4096   regular file
+Device: fc01h/64513d    Inode: 258084      Links: 1
+Access: (0644/-rw-r--r--)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
+Access: 2019-09-26 12:47:34.337622163 +0000
+Modify: 2019-07-23 15:41:13.075202952 +0000
+Change: 2019-07-23 15:41:13.075202952 +0000
+ Birth: -  
+\end{verbatim}
+From this, we learn that \verb|~/.bashrc| is indeed a regular file. It is owned by the user with the \textsc{uid} 1000, which happens to be \emph{patrick}. 
+
+\subsection{Directory}
+
+A directory contains other entries. It can be created with \verb|mkdir| command. An empty directory can be deleted with \verb|rmdir|. Contents of a directory can be listed with the \verb|ls| command.
+
+\begin{verbatim}
+$ mkdir folder
+$ rmdir folder  
+\end{verbatim}
+If a directory is not empty, it cannot be deleted with \verb|rmdir|.
+
+\begin{verbatim}
+$ mkdir folder
+$ touch folder/file
+$ rmdir folder
+rmdir: failed to remove 'folder/': Directory not empty
+\end{verbatim}
+The \emph{stat} tool output of folders shows us that folders have the same metadata attached to them that regular files have.
+
+\begin{verbatim}
+  File: folder
+  Size: 4096            Blocks: 8          IO Block: 4096   directory
+Device: fc01h/64513d    Inode: 5680241     Links: 2
+Access: (0775/drwxrwxr-x)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
+Access: 2019-09-26 13:49:04.481613173 +0000
+Modify: 2019-09-26 13:49:09.853614507 +0000
+Change: 2019-09-26 13:49:09.853614507 +0000
+ Birth: -  
+\end{verbatim}
+
+The syscalls used to create, read and delete directories are \verb|mkdir()|, \verb|opendir()|, \verb|readdir()|, \verb|rewinddir()|, \verb|seekdir()|, \verb|telldir()|, \verb|scandir()|.
+
+\subsection{Regular File}
+
+Regular files are what we think of when we think of files. They contain data, and can be written to and read from.
+
+\begin{verbatim}
+$ echo hi > filename
+$ cat filename
+hi  
+\end{verbatim}
+The \emph{stat} tool output shows us that folders have a basic amount of metadata attached to them.
+
+\begin{verbatim}
+  File: file
+  Size: 0               Blocks: 0          IO Block: 4096   regular empty file
+Device: fc01h/64513d    Inode: 258817      Links: 1
+Access: (0664/-rw-rw-r--)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
+Access: 2019-09-26 14:41:37.221013724 +0000
+Modify: 2019-09-26 14:41:37.221013724 +0000
+Change: 2019-09-26 14:41:37.221013724 +0000
+ Birth: -
+\end{verbatim}
+
+\subsection{Symbolic Link}
+
+
+
+
+\section{Permissions}
+
+UNIX sports a very simple permissions model that is based on a bitmask. Every file has an owner (user) and a group associated with it. The permissions that can be given are \emph{read}, \emph{write} and \emph{execute} for each of the owner, the group and the world (anyone). In addition to that, there is a set of special flags that can be set on entries, which are \emph{set-user-\textsc{id}}, \emph{set-group-\textsc{id}} and the \emph{sticky bit}.
+
+These permissions are typically either shown in octal form (such as 0755) or in text form.
+
+\begin{table}[!h]
+\centering\caption{List of Permissions}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Name} & \textbf{Octal} & \textbf{String}\\
+\midrule
+Set user ID      & 4000 & \verb|---s------|\\
+Set group ID     & 2000 & \verb|------s---|\\
+Sticky bit       & 1000 & \verb|---------t|\\
+Read by owner    & 0400 & \verb|-r--------|\\
+Write by owner   & 0200 & \verb|--w-------|\\
+Execute by owner & 0100 & \verb|---x------|\\
+Read by group    & 0040 & \verb|----r-----|\\
+Write by group   & 0020 & \verb|-----w----|\\
+Execute by group & 0010 & \verb|------x---|\\
+Read by world    & 0004 & \verb|-------r--|\\
+Write by world   & 0002 & \verb|--------w-|\\
+Execute by world & 0001 & \verb|---------x|\\
+\bottomrule  
+\end{tabular}
+\end{table}
+Permissions can be changed for files using the \emph{chmod} utility. An example of setting full read, write and execute permissions for owner, group and world might look like such.
+
+\begin{verbatim}
+$ touch file
+$ chmod 0777 file
+$ ls -l file
+-rwxrwxrwx 1 patrick patrick 0 Sep 26 14:25 file  
+\end{verbatim}
+When removing read permissions, even the owner is unable to read from it.
+
+\begin{verbatim}
+$ touch file
+$ chmod 0000 file
+$ cat file
+cat: file: Permission denied
+\end{verbatim}
+
+\subsection{Setuid}
+
+\subsection{Directory Execute}
+
+\subsection{Sticky bit}
+
+
+\end{document}
