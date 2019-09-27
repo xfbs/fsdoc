@@ -42,6 +42,9 @@
 \newabbreviation{sip}{sip}{System Integrity Protection}
 \makeglossaries
 
+% don't show subsubsections in toc
+\addtocontents{toc}{\setcounter{tocdepth}{2}}
+
 \begin{document}
 
 \maketitle
@@ -55,6 +58,8 @@ Filesystems have always been fascinating to me. They are a kind of ubiquitous da
 We will look at what kinds of filesystems exist in the Linux kernel, and how they differ. We will look at the API that is presented to the user. We will also explore some advanced filesystem features and even implement our own little FS with FUSE.
 
 All that is required for following along is a bit of experience with the Linux command line. MacOS also works, but has a slightly different set of features that are also addressed. Windows users may want to install WSL, but we will also take a look at some Windows-specific quirks.
+
+This document comes with some code for utilities to work with the file system. These should be compiled and used. All command line examples in this document use these utilities rather than similarly named ones shipped with your system, unless noted otherwise.
 
 \section{History}
 
@@ -298,7 +303,7 @@ The sticky bit has an effect on directories only. When set, files in the directo
 
 \section{Attributes}
 
-Attributes are flags that can be set on filesystem entries. These attributes are, from what I can tell, not standardised across operating systems.
+Attributes are flags that can be set on filesystem entries. These attributes are, from what I can tell, not standardised across operating systems. 
 
 \subsection{Linux}
 
@@ -313,7 +318,12 @@ The xxx.
 
 \subsection{MacOS}
 
-Just like Linux, macOS also supports file attributes, called \emph{flags}. These are as documented in Table \ref{tbl:macosflags}. The attributes \emph{arch}, \emph{sappnd} and \emph{schg} can only be set and unset by the superuser. As long as \gls{sip} is active, the \emph{restricted} flag cannot be set or unset by anyone.
+% help: what is https://ss64.com/osx/setfile.html setfile? 
+% what does it do and how does it work?
+
+MacOS also supports file attributes, called \emph{flags}. They are returned in the \verb|sv_flags| field of the \verb|stat| syscall. These are as documented in Table \ref{tbl:macosflags}. The attributes \emph{arch}, \emph{sappnd} and \emph{schg} can only be set and unset by the superuser. 
+
+Apple's \gls{sip} uses them to mark files and folders as system folders with the \emph{restricted} flag, which cannot be set or unset by anyone unless \gls{sip} is turned off.
 
 \begin{table}
 \centering\caption{MacOS File Attributes}\label{tbl:macosflags}
@@ -330,6 +340,7 @@ Name & Description\\
 \emph{schg} & File may not be changed, even by the superuser.\\
 \emph{sappnd} & File may only appended to, even by the superuser.\\
 \emph{restricted} & File is under \gls{sip}.\\
+\emph{nounlink} & File may not be removed, renamed or mounted on.\\
 \bottomrule  
 \end{tabular}
 \end{table}
@@ -343,8 +354,9 @@ dr-xr-xr-x   2 root  hidden               1 Sep 24 09:31 /net
 drwxr-xr-x   6 root  sunlnk,hidden      192 Sep 27  2018 /private  
 \end{verbatim}
 
-
 % https://en.wikipedia.org/wiki/File_attribute
+
+\subsubsection{Nodump}
 
 \section{Extended Attributes}
 
