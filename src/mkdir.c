@@ -1,8 +1,3 @@
-/* mkdir
- *
- * Creates a directory file with access permissions specified.
- */
-
 #include <unistd.h>
 #include <assert.h>
 #include <stdio.h>
@@ -15,6 +10,8 @@ int main(int argc, char *argv[]) {
     /* make sure an argument was given */
     if(argc != 3) {
         fprintf(stderr, "Usage: %s <name> <mode>\n", argv[0]);
+        fprintf(stderr, "Creates directory file with name <name> and mode specified "
+                "by <mode>.\n");
         return EXIT_FAILURE;
     }
 
