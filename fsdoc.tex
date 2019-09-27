@@ -29,12 +29,17 @@
 
 \setabbreviationstyle{long-short-sc}
 \newabbreviation{fat}{fat}{File Allocation Table}
+\newabbreviation{ext}{ext}{Extended File System}
 \newabbreviation{ntfs}{ntfs}{New Technology File System}
 \newabbreviation{uid}{uid}{User ID}
 \newabbreviation{gid}{gid}{Group ID}
 \newabbreviation{fifo}{fifo}{First In, First Out}
 \newabbreviation{ipc}{ipc}{Interprocess Communication}
 \newabbreviation{icmp}{icmp}{Internet Control Message Protocol}
+\newabbreviation{acl}{acl}{Access Control Lists}
+\newabbreviation{posix}{posix}{Portable Operating Systems Interface}
+\newabbreviation{gui}{gui}{Guided User Interface}
+\newabbreviation{sip}{sip}{System Integrity Protection}
 \makeglossaries
 
 \begin{document}
@@ -280,16 +285,101 @@ This functionality is used in executables that need extra capabilities but shoul
 
 The sticky bit has an effect on directories only. When set, files in the directory can be deleted or renamed only by the owner of the file, or the owner of the directory. This is used for directories like \verb|/tmp|, where anyone should be able to write into, but files should not be able to be deleted by anyone other than the user that created them.
 
+\section{Quotas}
+
+\subsection{User}
+
+\subsection{Group}
+
+\subsection{Project}
+
+% https://lwn.net/Articles/623835/
+% http://man7.org/linux/man-pages/man8/setquota.8.html
+
+\section{Attributes}
+
+Attributes are flags that can be set on filesystem entries. These attributes are, from what I can tell, not standardised across operating systems.
+
+\subsection{Linux}
+
+Linux sports a number of attributes.
+
+% man chattr
+% man ioctl_iflags
+
+\subsubsection{Append-only file}
+
+The xxx.
+
+\subsection{MacOS}
+
+Just like Linux, macOS also supports file attributes, called \emph{flags}. These are as documented in Table \ref{tbl:macosflags}. The attributes \emph{arch}, \emph{sappnd} and \emph{schg} can only be set and unset by the superuser. As long as \gls{sip} is active, the \emph{restricted} flag cannot be set or unset by anyone.
+
+\begin{table}
+\centering\caption{MacOS File Attributes}\label{tbl:macosflags}
+\begin{tabular}{@{}lp{10.5cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\emph{nodump} & Don't dump this file.\\
+\emph{uchg} & File may not be changed.\\
+\emph{uappnd} & File may only be appended to.\\
+\emph{opaque} & Directory is opaque when viewed through a union mount.\\
+\emph{hidden} & File or directory is hidden in the \gls{gui}.\\
+\emph{arch} & File has been archived.\\
+\emph{schg} & File may not be changed, even by the superuser.\\
+\emph{sappnd} & File may only appended to, even by the superuser.\\
+\emph{restricted} & File is under \gls{sip}.\\
+\bottomrule  
+\end{tabular}
+\end{table}
+It is possible, on macOS, to view the file attributes using \verb|ls| with the \verb|O| flag. 
+
+\begin{verbatim}
+$ ls -oOd /bin /Volumes /net /private
+drwxr-xr-x+  4 root  hidden             128 Sep 25 20:11 /Volumes
+drwxr-xr-x@ 37 root  restricted,hidden 1184 Jun 12 15:54 /bin
+dr-xr-xr-x   2 root  hidden               1 Sep 24 09:31 /net
+drwxr-xr-x   6 root  sunlnk,hidden      192 Sep 27  2018 /private  
+\end{verbatim}
+
+
+% https://en.wikipedia.org/wiki/File_attribute
+
 \section{Extended Attributes}
 
+Extended Attributes allow storing of arbitrary metadata of files on a file system. The concept of them was from the \gls{posix}\.1e draft which was withdrawn.
+
+% https://unix.stackexchange.com/questions/489820/why-was-posix-1e-withdrawn
+
+% https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/limits.h
+
+The amount and size of attributes that can be set depend on the filesystem. Some filesystems, such as \gls{fat}, do not support them at all, while others like the \gls{ext} family of filesystems limit them.
+
+POSIX Extended Attributes are divided into different namespaces. The \emph{user} namespace has no restrictions on what attributes can be set. 
+
 \subsection{Capabilities}
+
+\subsection{Access Control Lists}
+
+\gls{acl} is a feature by which access to filesystem entries can be controlled more finely than with UNIX permissions\footnote{See \texttt{man acl} for more information}.
+
 
 \section{Alternate File Streams}
 
 \subsection{Real-World Usage}
 
-\section{Access Control Lists}
+\section{Virtual Filesystems}
+
+\subsection{Proc}
+
+\subsection{Sys}
+
 
 \printglossaries
+
+
+
+
 
 \end{document}
