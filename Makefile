@@ -1,7 +1,10 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
+TOOLS	= src/perms src/unlink
 
 all: fsdoc.pdf
+
+tools: $(TOOLS)
 
 fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
@@ -9,9 +12,10 @@ fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
 	$(LATEX) $<
 
-src/perms: src/perms.c
+src/%: src/%.c
 	$(CC) -o $@ $<
 
 clean:
 	$(RM) fsdoc.pdf
 	$(RM) *.aux *.glg *.glo *.log *.ist *.out *.toc *.aux *.gls
+	$(RM) $(TOOLS)
