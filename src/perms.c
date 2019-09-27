@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
     gid_t egid = getegid();
 
     printf("uid %d (%s)\n", uid, uid_to_name(uid));
-    printf("euid %d (%s)\n", euid, uid_to_name(euid));
     printf("gid %d (%s)\n", gid, gid_to_name(gid));
+    printf("euid %d (%s)\n", euid, uid_to_name(euid));
     printf("egid %d (%s)\n", egid, gid_to_name(egid));
 
     return 0;

@@ -5,6 +5,7 @@
 \setmainfont{CMU Serif}
 \setmonofont{CMU Typewriter Text}
 
+\usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
 \usepackage{listings}
@@ -40,6 +41,10 @@
 \newabbreviation{posix}{posix}{Portable Operating Systems Interface}
 \newabbreviation{gui}{gui}{Guided User Interface}
 \newabbreviation{sip}{sip}{System Integrity Protection}
+\newabbreviation{api}{api}{Application Programming Interface}
+\newabbreviation{hfs+}{hfs+}{Hiearchical File System Plus}
+\newabbreviation{apfs}{apfs}{Apple File System}
+\newabbreviation{ssd}{ssd}{Solid State Drive}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -86,17 +91,27 @@ In this case, we learn that the filesystem in use is from the \textsc{ext} famil
 
 The most common filesystem used on Linux is \verb|ext4|, but there are plenty others. Filesystems supported by Linux are \verb|ext|, \verb|ext2|, \verb|ext3|, \verb|ext4|, \verb|hpfs|, \verb|iso9660|, \verb|JFS|, \verb|minix|, \verb|msdos|, \verb|ncpfs nfs|, \verb|ntfs|, \verb|proc|, \verb|Reiserfs|, \verb|smb|, \verb|sysv|, \verb|umsdos|, \verb|vfat|, \verb|XFS|, \verb|xiafs|.
 
-\subsection{\textsc{ext} family}
+\subsection{\glsdesc*{ext} family}
 
-The \textsc{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth.
+The \gls{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth.
 
-\subsection{\textsc{fat} family}
+\subsection{\glsdesc*{fat} family}
 
 The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \gls{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium.
 
-\subsection{\textsc{ntfs}}
+The principal difference between these drivers is the amount of emulation for \textsc{unix} features they provide. The \emph{msdos} driver supports almost no \textsc{unix} features, such as file permissions, attributes, and only filenames with a length of 8 characters, optionally followed by a dot and a three-character extension.
+
+\subsection{\glsdesc*{ntfs}}
 
 The \gls{ntfs} is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate file streams}.
+
+\subsection{\glsdesc*{hfs+}}
+
+The \gls{hfs+} is a filesystem currently used by Apple on their whole product range.
+
+\subsection{\glsdesc*{apfs}}
+
+The \gls{apfs} is a new filesystem developed by Apple and used across their product range. It is optimised for newer \gls{ssd} storage and has some unique features, such as filesystem snapshots, native full disk encryption, metadata integrity with checksums, and space sharing.
 
 \section{File Hierachy}
 
@@ -261,18 +276,17 @@ cat: file: Permission denied
 
 The execute bit has a different meaning for directories. If it is not set, the contents of the directory can't be enumerated with \verb|readdir()|. 
 
-\subsection{Set \textsc{uid} and Set \textsc{gid}}
+\subsection{Set UID and Set GID}
 
 The \verb|setuid| bit are special in the sense that they change the effective \gls{uid} and \gls{gid} of the running process. Normally, when running an executable, the \gls{uid} and \gls{gid} are set to that of the user that executes it.
 
 \begin{verbatim}
 $ ./perms
 uid 1000 (patrick)
-euid 1000 (patrick)
 gid 1000 (patrick)
+euid 1000 (patrick)
 egid 1000 (patrick)  
 \end{verbatim}
-
 However, when the Set \gls{uid} bit is set, then the effective \gls{uid} is set to that of the user who \emph{owns} the executable, rather than the one who runs it.
 
 \begin{verbatim}
@@ -280,9 +294,9 @@ $ chown root perms
 $ chmod u+s perms
 $ ./perms
 uid 1000 (patrick)
-euid 0 (root)
 gid 1000 (patrick)
-egid 1000 (root)  
+euid 0 (root)
+egid 1000 (patrick)  
 \end{verbatim}
 This functionality is used in executables that need extra capabilities but should be usable by non-root users as well. Examples for this are the \verb|/bin/ping| utility, which needs raw access to generate \gls{icmp} ping packets, or \verb|/usr/bin/sudo|, which grants superuser rights to regular users depending on its configuration.
 
@@ -321,10 +335,16 @@ The xxx.
 % help: what is https://ss64.com/osx/setfile.html setfile? 
 % what does it do and how does it work?
 
-MacOS also supports file attributes, called \emph{flags}. They are returned in the \verb|sv_flags| field of the \verb|stat| syscall. These are as documented in Table \ref{tbl:macosflags}. The attributes \emph{arch}, \emph{sappnd} and \emph{schg} can only be set and unset by the superuser. 
+% how are these flags different from attrs like getattrlist
+% and setattrlist?
 
-Apple's \gls{sip} uses them to mark files and folders as system folders with the \emph{restricted} flag, which cannot be set or unset by anyone unless \gls{sip} is turned off.
+MacOS also supports file attributes, called \emph{flags}. They are returned in the \verb|sv_flags| field of the \verb|stat()| syscall. The \verb|stat| utility included in this project displays the flags set for a given file.
 
+\begin{verbatim}
+$ stat /bin | grep flags
+flags: restricted,hidden
+\end{verbatim}
+Table \ref{tbl:macosflags} lists all flags currently known to and implemented in the MacOS kernel, as of the time of writing\footnote{\texttt{/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/stat.h} documents the currently known and used flags.}. Some flags are limited in that they can only be set by the superuser. 
 \begin{table}
 \centering\caption{MacOS File Attributes}\label{tbl:macosflags}
 \begin{tabular}{@{}lp{10.5cm}@{}}
@@ -344,6 +364,9 @@ Name & Description\\
 \bottomrule  
 \end{tabular}
 \end{table}
+
+Apple's \gls{sip} uses the \emph{restricted} flag to mark files and folders as system folders, which cannot be set or unset by anyone unless \gls{sip} is turned off.
+
 It is possible, on macOS, to view the file attributes using \verb|ls| with the \verb|O| flag. 
 
 \begin{verbatim}
@@ -357,6 +380,64 @@ drwxr-xr-x   6 root  sunlnk,hidden      192 Sep 27  2018 /private
 % https://en.wikipedia.org/wiki/File_attribute
 
 \subsubsection{Nodump}
+
+The \emph{nodump} flag can be set by any regular user and signals to the \emph{dump} utility, which was used for backups in old versions of \textsc{unix} and is long obsolete, that this file should not be included in the dump.
+
+\subsubsection{Uchg}
+
+The \emph{uchg} flag signals to the kernel that this file is immutable and should not be able to be changed. It can be set by a regular user. It affects any user and prevents them from writing to, deleting or renaming the file until the flag is cleared.
+
+\begin{verbatim}
+$ flags file uchg
+$ echo hi > file
+-bash: file: Operation not permitted
+$ echo hi | sudo tee file
+tee: file: Operation not permitted
+$ unlink file
+file: Operation not permitted
+$ flags file nouchg
+$ unlink file
+\end{verbatim}
+
+\subsubsection{Uappnd}
+
+The user append flag prevents a file from being overwritten, by only letting processes open it in append mode. It also prevents the file from being deleted with \verb|unlink()|, renamed or hard links to it being created. This flag can be set and unset by the owner of the file.
+
+\begin{verbatim}
+$ touch file
+$ flags file uappnd
+$ echo hi > file
+-bash: file: Operation not permitted
+$ echo hi >> file
+\end{verbatim}
+
+\subsubsection{Opaque}
+
+The opaque flag plays a role when using a union mount. This happens when mounting a filesystem over another filesystem such that both are visible. When setting the opaque flag on a directory, then this union property does not work for the directory.
+
+\subsubsection{Hidden}
+
+The hidden flag hides files or folders that it is defined on from the GUI. 
+
+\begin{verbatim}
+$ ls
+Makefile  fsdoc.tex src
+$ flags Makefile hidden
+$ open .
+\end{verbatim}
+
+See Figure \ref{fig:macoshidden} to see that the Makefile is indeed hidden from Finder.
+
+\begin{figure}
+\centering\caption{Hidden Makefile}\label{fig:macoshidden}
+\includegraphics[width=12cm]{img/hidden}  
+\end{figure}
+
+\subsubsection{Arch}
+
+The archived flag is not handled by the kernel itself. It can be set to mark that a file has been archived, such as during a backup operation.
+
+\subsubsection{Schg}
 
 \section{Extended Attributes}
 
@@ -379,7 +460,35 @@ POSIX Extended Attributes are divided into different namespaces. The \emph{user}
 
 \section{Alternate File Streams}
 
-\subsection{Real-World Usage}
+\subsection{\gls{hfs+} Resource Fork}
+
+A resource fork is a section of a file besides the file's actual contents that can be used to store structured data besides the unstructured data of the file itself. They appear as the extended attribute \verb|com.apple.ResourceFork|. 
+
+Apple has a special syntax that can be used to access these forks with the standard \gls{posix} \gls{api} and tools. Given a file \verb|filename|, the special path \verb|filename/..namedforks/rsrc| can be used to access the resource fork.
+
+\begin{verbatim}
+$ touch file
+$ echo hi > file/..namedforks/rsrc
+$ cat file
+$ cat file/..namedforks/rsrc
+hi  
+\end{verbatim}
+
+Using \verb|ls -l@|, the extended attributes of the file can be listed, revealing the resource fork attribute.
+
+\begin{verbatim}
+$ ls -l@ file
+-rw-r--r--@ 1 pelsen  staff  0 Sep 27 22:49 file
+        com.apple.ResourceFork  3  
+\end{verbatim}
+
+These resource forks are a feature carried over from classic MacOS, and are not really used anymore. In fact, the \gls{api} to access them, \emph{Resource Manager}, have been removed. There are, to the best of my knowledge, no other named forks apart from the resource fork exposed.
+
+\subsection{\gls{ntfs} Alternate Data Streams}
+
+% https://www.borncity.com/blog/2018/09/22/infos-zu-windows-ntfs-alternative-data-streams/
+
+\gls{ntfs} supports alternate data streams, which are used by Microsoft to tag downloaded files as being unsafe. It is also an interesting way to hide malware.
 
 \section{Virtual Filesystems}
 
