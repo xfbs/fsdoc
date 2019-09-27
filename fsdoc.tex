@@ -45,6 +45,7 @@
 \newabbreviation{hfs+}{hfs+}{Hiearchical File System Plus}
 \newabbreviation{apfs}{apfs}{Apple File System}
 \newabbreviation{ssd}{ssd}{Solid State Drive}
+\newabbreviation{fuse}{fuse}{Filesystem In Userspace}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -306,6 +307,8 @@ The sticky bit has an effect on directories only. When set, files in the directo
 
 \section{Quotas}
 
+Quotas allow the system to limit disk usage for certain individuals, groups or, as is the case on Linux, projects. This probably originated back in the time where servers were large and expensive and shared between many users, and were supposed to prevent users from using a disproportionate amount of system resources (disk space).
+
 \subsection{User}
 
 \subsection{Group}
@@ -496,11 +499,13 @@ These resource forks are a feature carried over from classic MacOS, and are not 
 
 \subsection{Sys}
 
+\section{\glsdesc*{fuse}}
+
+\gls{fuse} is a facility by which filesystems can be implemented in userspace, meaning that requests are proxied from the kernel into a userspace process. Unlike regular filesystems, which are implemented and run in the kernel. This has some advantages, namely that a user does not need superuser privileges to mount a userspace filesystem, and it also means that an experimental filesystem can be quickly hacked up and played around with without running the change of causing the kernel to crash, as a misbehaving regular filesystem might do. 
+
+On the other hand, \gls{fuse} filesystems also have a number of restrictions. Features like the \emph{setuid} bit or the capabilities that extended attributes allow setting on executables mean that if an unprivileged user can fully control a filesystem, a system can be easily compromised. For this reason, \gls{fuse} filesystems are more limited.
+
 
 \printglossaries
-
-
-
-
 
 \end{document}
