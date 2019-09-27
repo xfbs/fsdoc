@@ -1,6 +1,6 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
-TOOLS	= src/perms src/unlink
+TOOLS	= src/perms src/unlink src/rmdir
 
 all: fsdoc.pdf
 

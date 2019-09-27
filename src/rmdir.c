@@ -1,7 +1,7 @@
-/* unlink
+/* rmdir
  *
- * removes a directory entry, decrements the link count of the file.
- * see `man 2 unlink` for more information.
+ * removes a directory file. The directory must be empty (it must now have any
+ * entries other than ‘.’ and ‘..’.
  */
 
 #include <unistd.h>
@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     assert(argc > 1);
 
     /* try to call unlink */
-    if(0 != unlink(argv[1])) {
+    if(0 != rmdir(argv[1])) {
         /* print error on failure */
         perror(argv[1]);
     }
