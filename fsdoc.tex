@@ -30,9 +30,9 @@
 \setabbreviationstyle{long-short-sc}
 \newabbreviation{fat}{fat}{File Allocation Table}
 \newabbreviation{ntfs}{ntfs}{New Technology File System}
+\newabbreviation{uid}{uid}{User ID}
+\newabbreviation{gid}{gid}{Group ID}
 \makeglossaries
-
-
 
 \begin{document}
 
@@ -232,15 +232,23 @@ $ cat file
 cat: file: Permission denied
 \end{verbatim}
 
-\subsection{Setuid}
+\subsection{Set \textsc{uid} and Set \textsc{gid}}
+
+The \verb|setuid| bit are special in the sense that they change the effective \gls{uid} and \gls{gid} of the running process.
 
 \subsection{Directory Execute}
+
+The execute bit has a different meaning for directories. If it is not set, the contents of the directory can't be enumerated with \verb|readdir()|. 
 
 \subsection{Sticky bit}
 
 \section{Extended Attributes}
 
+\subsection{Capabilities}
+
 \section{Alternate File Streams}
+
+\subsection{Real-World Usage}
 
 \section{Access Control Lists}
 

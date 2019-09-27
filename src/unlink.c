@@ -1,9 +1,3 @@
-/* unlink
- *
- * removes a directory entry, decrements the link count of the file.
- * see `man 2 unlink` for more information.
- */
-
 #include <unistd.h>
 #include <assert.h>
 #include <stdio.h>
@@ -13,7 +7,11 @@ int main(int argc, char *argv[]) {
     int ret;
 
     /* make sure an argument was given */
-    assert(argc > 1);
+    if(argc != 2) {
+        fprintf(stderr, "Usage: %s <name>\n", argv[0]);
+        fprintf(stderr, "Removes the directory entry (file) given by <name>.\n");
+        return EXIT_FAILURE;
+    }
 
     /* try to call unlink */
     if(0 != unlink(argv[1])) {

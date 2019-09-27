@@ -1,10 +1,10 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
-TOOLS	= src/perms src/unlink src/rmdir
+TOOLS	= perms unlink rmdir mkdir
 
 all: fsdoc.pdf
 
-tools: $(TOOLS)
+tools: $(TOOLS:%=src/%)
 
 fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
@@ -18,4 +18,4 @@ src/%: src/%.c
 clean:
 	$(RM) fsdoc.pdf
 	$(RM) *.aux *.glg *.glo *.log *.ist *.out *.toc *.aux *.gls
-	$(RM) $(TOOLS)
+	$(RM) $(TOOLS:%=src/%)
