@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     }
 
     const char *flags = fflagstostr(stat.st_flags);
-    puts(flags);
+    printf("%08x (%s)\n", stat.st_flags, flags);
     free((void *)flags);
 
     return EXIT_SUCCESS;

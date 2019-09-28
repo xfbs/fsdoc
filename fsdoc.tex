@@ -341,33 +341,36 @@ The xxx.
 % how are these flags different from attrs like getattrlist
 % and setattrlist?
 
-MacOS also supports file attributes, called \emph{flags}. They are returned in the \verb|sv_flags| field of the \verb|stat()| syscall. The \verb|stat| utility included in this project displays the flags set for a given file.
+MacOS also supports file attributes, called \emph{flags}. They are returned as a bitmask in the \verb|sv_flags| field of the \verb|stat()| syscall. The \verb|stat| utility included in this project displays the flags set for a given file by using the system-provided \verb|fflagstostr()| function to decode the bitmaks to a comma-delimited string.
 
 \begin{verbatim}
 $ stat /bin | grep flags
 flags: restricted,hidden
 \end{verbatim}
-Table \ref{tbl:macosflags} lists all flags currently known to and implemented in the MacOS kernel, as of the time of writing\footnote{\texttt{/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/stat.h} documents the currently known and used flags.}. Some flags are limited in that they can only be set by the superuser. 
+Table \ref{tbl:macosflags} lists all flags currently known to and implemented in the MacOS kernel, as of the time of writing\footnote{\texttt{/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/stat.h} documents the currently known and used flags.}. Some flags (those beginning with \verb|SF_|) are limited in that they can only be set by the superuser, and while \gls{sip} is active, additional restrictions apply when setting or clearing certain flags. 
 \begin{table}
-\centering\caption{MacOS File Attributes}\label{tbl:macosflags}
-\begin{tabular}{@{}lp{10.5cm}@{}}
+\centering\caption{MacOS File Attributes (Flags)}\label{tbl:macosflags}
+\begin{tabular}{@{}lllp{5cm}@{}}
 \toprule
-Name & Description\\
+Name & Constant & Value (hex) & Description\\
 \midrule
-\emph{nodump} & Don't dump this file.\\
-\emph{uchg} & File may not be changed.\\
-\emph{uappnd} & File may only be appended to.\\
-\emph{opaque} & Directory is opaque when viewed through a union mount.\\
-\emph{hidden} & File or directory is hidden in the \gls{gui}.\\
-\emph{arch} & File has been archived.\\
-\emph{schg} & File may not be changed, even by the superuser.\\
-\emph{sappnd} & File may only appended to, even by the superuser.\\
-\emph{restricted} & File is under \gls{sip}.\\
-\emph{nounlink} & File may not be removed, renamed or mounted on.\\
+\emph{nodump} & \verb|UF_NODUMP| & 00\,00\;00\,01 & Don't dump this file.\\
+\emph{uchg} & \verb|UF_IMMUTABLE| & 00\,00\;00\,02 & Immutable.\\
+\emph{uappnd} & \verb|UF_APPEND| & 00\,00\;00\,04 & Append-Only.\\
+\emph{opaque} & \verb|UF_OPAQUE| & 00\,00\;00\,08 & Opaque in union mount.\\
+— & \verb|UF_COMPRESSED| & 00\,00\;00\,20 & Compressed.\\
+— & \verb|UF_TRACKED| & 00\,00\;00\,40 & Tracked.\\
+— & \verb|UF_DATAVAULT| & 00\,00\;00\,80 & Datavault.\\
+\emph{hidden} & \verb|UF_HIDDEN| & 00\,00\;80\,00 & Hidden from \glsname{gui}.\\
+\midrule
+\emph{arch} & \verb|SF_ARCHIVED| & 00\,01\;00\,00 & Archived.\\
+\emph{schg} & \verb|SF_IMMUTABLE| & 00\,02\;00\,00 & Immutable.\\
+\emph{sappnd} & \verb|SF_APPEND| & 00\,04\;00\,00 & Append-Only.\\
+\emph{restricted} & \verb|SF_RESTRICTED| & 00\,08\;00\,00 & File is under \glsname{sip}.\\
+\emph{sunlnk} & \verb|SF_NOUNLINK| & 00\,10\;00\,00 & Undeletable.\\
 \bottomrule  
 \end{tabular}
 \end{table}
-
 Apple's \gls{sip} uses the \emph{restricted} flag to mark files and folders as system folders, which cannot be set or unset by anyone unless \gls{sip} is turned off.
 
 It is possible, on macOS, to view the file attributes using \verb|ls| with the \verb|O| flag. 
@@ -384,11 +387,11 @@ drwxr-xr-x   6 root  sunlnk,hidden      192 Sep 27  2018 /private
 
 \subsubsection{Nodump}
 
-The \emph{nodump} flag can be set by any regular user and signals to the \emph{dump} utility, which was used for backups in old versions of \textsc{unix} and is long obsolete, that this file should not be included in the dump.
+The \emph{nodump} flag can be set by any regular user and signals to the \emph{dump} utility, which was used for backups in old versions of \textsc{unix} and is long obsolete, that this file should not be included in the dump. This flag has no effect on file operations and is merely a signal to other applications.
 
-\subsubsection{Uchg}
+\subsubsection{Immutable}
 
-The \emph{uchg} flag signals to the kernel that this file is immutable and should not be able to be changed. It can be set by a regular user. It affects any user and prevents them from writing to, deleting or renaming the file until the flag is cleared.
+The \emph{uchg} and \emph{schg} flags disable any kind of modification from being done to a file with this flag. That includes writing to it, renaming it, and deleting it. 
 
 \begin{verbatim}
 $ flags file uchg
@@ -401,10 +404,23 @@ file: Operation not permitted
 $ flags file nouchg
 $ unlink file
 \end{verbatim}
+While their effects are identical, the difference between these flags is that the \emph{uchg} flag can be set and cleared by the owner of the file, whereas the \emph{schg} flag can only be set and cleared by the superuser.
 
-\subsubsection{Uappnd}
+\begin{verbatim}
+$ chflags schg file
+$ echo hi > file
+-bash: file: Operation not permitted
+$ echo hi | sudo tee file
+tee: file: Operation not permitted
+$ unlink file
+file: Operation not permitted
+$ sudo chflags noschg file
+$ unlink file
+\end{verbatim}
 
-The user append flag prevents a file from being overwritten, by only letting processes open it in append mode. It also prevents the file from being deleted with \verb|unlink()|, renamed or hard links to it being created. This flag can be set and unset by the owner of the file.
+\subsubsection{Append-Only}
+
+The \emph{uappnd} and \emph{sappnd} flags prevent a file from being overwritten, by only letting processes open it in append mode. It also prevents the file from being deleted with \verb|unlink()|, renamed or hard links to it being created. The difference between the two is that \emph{uappnd} can be set and unset by the owner, whereas \emph{sappnd} can only be set and unset by the superuser.
 
 \begin{verbatim}
 $ touch file
@@ -418,9 +434,16 @@ $ echo hi >> file
 
 The opaque flag plays a role when using a union mount. This happens when mounting a filesystem over another filesystem such that both are visible. When setting the opaque flag on a directory, then this union property does not work for the directory.
 
+% TODO: example of a union mount.
+
 \subsubsection{Hidden}
 
 The hidden flag hides files or folders that it is defined on from the GUI. 
+
+\begin{figure}
+\centering\caption{Hidden Makefile}\label{fig:macoshidden}
+\includegraphics[width=12cm]{img/hidden}  
+\end{figure}
 
 \begin{verbatim}
 $ ls
@@ -428,19 +451,17 @@ Makefile  fsdoc.tex src
 $ flags Makefile hidden
 $ open .
 \end{verbatim}
-
 See Figure \ref{fig:macoshidden} to see that the Makefile is indeed hidden from Finder.
 
-\begin{figure}
-\centering\caption{Hidden Makefile}\label{fig:macoshidden}
-\includegraphics[width=12cm]{img/hidden}  
-\end{figure}
+\subsubsection{Archived}
 
-\subsubsection{Arch}
+The archived flag is not handled by the kernel itself. It can be set to mark that a file has been archived, such as during a backup operation. This flag has no effect on file operations.
 
-The archived flag is not handled by the kernel itself. It can be set to mark that a file has been archived, such as during a backup operation.
+\subsubsection{Restricted}
 
-\subsubsection{Schg}
+\subsubsection{Undocumented}
+
+Not every bit in the bitfield has a name. Undocumented bits can still be set, but they have no effect. This can be used to store data.
 
 \section{Extended Attributes}
 

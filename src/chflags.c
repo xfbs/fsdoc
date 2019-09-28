@@ -22,16 +22,20 @@ char **split_string(char *str, const char *sep) {
 
 int main(int argc, char *argv[]) {
     int ret;
+    const char *progname = argv[0];
 
     /* make sure an argument was given */
     if(argc != 3) {
-        fprintf(stderr, "Usage: %s <name> <flags>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <flags> <file>\n", progname);
         fprintf(stderr, "Updates flags of file\n");
         return EXIT_FAILURE;
     }
 
+    char *flagsstr = argv[1];
+    const char *filename = argv[2];
+
     /* split flags from comma-delimited list */
-    char **list = split_string(argv[2], ",");
+    char **list = split_string(flagsstr, ",");
 
     /* parse mode string */
     unsigned long setp = 0;
@@ -44,7 +48,7 @@ int main(int argc, char *argv[]) {
 
     /* get previous flags */
     struct stat stat;
-    if(0 != lstat(argv[1], &stat)) {
+    if(0 != lstat(filename, &stat)) {
         perror("stat");
         return EXIT_FAILURE;
     }
@@ -55,7 +59,7 @@ int main(int argc, char *argv[]) {
     flags = flags | setp;
 
     /* set flags */
-    if(0 != lchflags(argv[1], flags)) {
+    if(0 != lchflags(filename, flags)) {
         perror("chflags");
         exit(EXIT_FAILURE);
     }

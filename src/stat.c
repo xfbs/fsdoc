@@ -82,11 +82,11 @@ int main(int argc, char *argv[]) {
     printf("ctime: %s\n", time_str(stat.st_ctimespec));
     printf("mtime: %s\n", time_str(stat.st_mtimespec));
     printf("birth: %s\n", time_str(stat.st_birthtimespec));
-    printf("dev:   %zu\n", stat.st_dev);
+    printf("dev:   %d\n", stat.st_dev);
     printf("gen:   %u\n", stat.st_gen);
 
     const char *flags = fflagstostr(stat.st_flags);
-    printf("flags: %s\n", flags);
+    printf("flags: %08x (%s)\n", stat.st_flags, flags);
     free((void *)flags);
 
     return EXIT_SUCCESS;
