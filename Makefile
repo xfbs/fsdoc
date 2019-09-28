@@ -1,6 +1,6 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
-TOOLS	= perms unlink rmdir mkdir stat flags
+TOOLS	= perms unlink rmdir mkdir stat chflags lsflags
 
 all: fsdoc.pdf
 
