@@ -324,7 +324,7 @@ Attributes are flags that can be set on filesystem entries. These attributes are
 
 \subsection{Linux}
 
-Linux sports a number of attributes.
+Linux sports a number of attributes. Unlike macOS, where attributes are stored in a bitset that is returned with the \verb|stat()| syscall, in Linux a special \verb|ioctl()| call has to be used to access and set them.
 
 % man chattr
 % man ioctl_iflags
