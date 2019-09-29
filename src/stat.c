@@ -10,6 +10,7 @@
 
 /* platform-specific settings */
 #ifdef __APPLE__
+#include <sys/types.h>
 #define HAS_GEN
 #define HAS_FLAGS
 #define HAS_BIRTH
@@ -20,14 +21,15 @@
 #define INODE_FMT "%lli"
 #define LINKS_FMT "%hu"
 #define SIZE_FMT "%lli"
-#define DEV_FMT "%d"
+#define DEV_FMT "%d,%d"
 #endif
 
 #ifdef __linux__
+#include <sys/sysmacros.h>
 #define INODE_FMT "%li"
 #define LINKS_FMT "%lu"
 #define SIZE_FMT "%li"
-#define DEV_FMT "%ld"
+#define DEV_FMT "%d,%d"
 #endif
 
 const char *uid_to_name(uid_t uid) {
@@ -153,7 +155,8 @@ int main(int argc, char *argv[]) {
     printf("birth: %s\n", time_str(stat.st_btim));
 #endif
 
-    printf("dev:   "DEV_FMT"\n", stat.st_dev);
+    printf("dev:   "DEV_FMT"\n", major(stat.st_dev), minor(stat.st_dev));
+    printf("rdev:  "DEV_FMT"\n", major(stat.st_rdev), minor(stat.st_rdev));
 
 #ifdef HAS_GEN
     printf("gen:   %u\n", stat.st_gen);

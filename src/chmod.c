@@ -6,6 +6,11 @@
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef __linux__
+/* linux doesn't have a lchmod. */
+#define lchmod chmod
+#endif
+
 #define WHO_MASK(x) \
     (x == 'u') ? 04700 : \
     (x == 'g') ? 02070 : \
