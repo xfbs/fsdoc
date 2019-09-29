@@ -8,4 +8,8 @@
 *.ist
 *.toc
 *.glg
+*.bbl
+*.bcf
+*.blg
+*.run.xml
 src/perms

@@ -1,21 +1,31 @@
 \documentclass[a4paper]{article}
 \usepackage[utf8]{inputenc}
+
+% typography: load CMU fonts to get bold small caps.
 \usepackage{fontspec}
 \setsansfont{CMU Sans Serif}
 \setmainfont{CMU Serif}
 \setmonofont{CMU Typewriter Text}
-
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{xcolor}
-\usepackage{listings}
 \usepackage{microtype}
-\usepackage{syntax}
+
+% references
+\usepackage[backend=biber]{biblatex}
+
+\usepackage{booktabs}
+\usepackage{listings}
+
+%\usepackage{syntax}
 \usepackage{amsmath}
 \usepackage[super]{nth}
+
+% illustrations
+\usepackage{xcolor}
+\usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{tikz-qtree}
 \usetikzlibrary{shapes,patterns,positioning,trees}
+
+% hyperlinks
 \usepackage[
   colorlinks,
   linkcolor={red!40!black},
@@ -23,6 +33,8 @@
   urlcolor={blue!60!black}
 ]{hyperref}
 \usepackage{glossaries-extra}
+
+\addbibresource{refs.bib}
 
 \title{Filesystems}
 \author{Patrick M. Elsen <pelsen@xfbs.net>}
@@ -46,6 +58,8 @@
 \newabbreviation{apfs}{apfs}{Apple File System}
 \newabbreviation{ssd}{ssd}{Solid State Drive}
 \newabbreviation{fuse}{fuse}{Filesystem In Userspace}
+\newabbreviation{lsb}{lsb}{Linux Standard Base}
+\newabbreviation{fhs}{fhs}{Filesystem Hiearchy Standard}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -116,7 +130,7 @@ The \gls{apfs} is a new filesystem developed by Apple and used across their prod
 
 \section{File Hierachy}
 
-In the \textsc{unix} world, the filesystem starts at the path \verb|/|. This is also called the \emph{root}. In this root, a number of directories typically exist, such as \verb|usr|, \verb|dev|, \verb|var|, \verb|bin|, and so forth.
+In the \textsc{unix} world, the filesystem starts at the path \verb|/|. This is also called the \emph{root file system}. In this root, a number of directories typically exist, such as \verb|usr|, \verb|dev|, \verb|var|, \verb|bin|, and so forth.
 
 \begin{verbatim}
 $ ls /
@@ -124,12 +138,157 @@ bin  etc  lib64  mnt  run  tmp  boot   home
 lib  opt  root   src  usr  dev  lib32  media 
 proc sbin sys   var
 \end{verbatim}
+Other filesystems are mounted in directories under \verb|/|. This means the root file system is actually a virtual file systems: it is not one single file systems, but it is rather comprised of a number of different file systems mounted in different folders. 
 
-Every entry in the file hiearchy has an \emph{inode} number associated with it, uniquely identifying the file (entry).
+% todo: lsmount util to list mounted?
 
-\subsection{File Hiearchy Standard}
+% Every entry in the file hiearchy has an \emph{inode} number associated with it, uniquely identifying the file (entry).
 
-\section{Entries}
+\subsection{Mounting}
+
+
+
+\subsection{Changing Filesystem Root}
+
+\subsection{Filesystem Hiearchy Standard}
+
+There is a standard for file system hiearchies in Linux-like operating systems, called the \gls{fhs}. This is a document which is put forth by the \gls{lsb}, describing what Linux installations should look like filesystem-wise\cite{fhs3}. It has a mandatory directory structure, as well as some optional components. 
+
+While this is an important document, illustrating how most Linux installations look like, not everyone sticks to these recommendations. For example, the NixOS distribution does not adhere to the \gls{fhs}, in order to provide isolation between packages\cite{vanderburg2011}. Debian, however, does follow the \gls{fhs} standard.
+
+Figures \ref{fig:fhs1} and \ref{fig:fhs2} provide an overview of the directories required by the \gls{fhs}, and what their purpose is as described in the standard document.
+
+\begin{figure}
+\begin{tikzpicture}[%
+  dir/.style={draw=black,thick,anchor=west,draw=black,fill=black,text=white},
+  opt/.style={draw=black,thick,anchor=west,dashed,fill=gray!50},
+  desc/.style={anchor=west},
+  grow via three points={one child at (0.5,-0.7) and
+  two children at (0.5,-0.7) and (0.5,-1.4)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}
+]
+  \node [dir] {/}
+    child { node [dir] {bin}}
+    child { node [dir] {boot}}
+    child { node [dir] {dev}}
+    child { node [dir] {etc}}
+    child { node [opt] {home}}
+    child { node [dir] {lib}}
+    child { node [opt] {lib32}}
+    child { node [dir] {media}}
+    child { node [dir] {mnt}}
+    child { node [dir] {opt}}
+    child { node [opt] {root}}
+    child { node [dir] {run}}
+    child { node [dir] {sbin}}
+    child { node [dir] {srv}}
+    child { node [dir] {tmp}}
+    child { node [dir] {usr}
+      child { node [dir] {bin}}
+      child { node [dir] {include}}
+      child { node [dir] {lib}}
+      child { node [dir] {local}}
+      child { node [dir] {sbin}}
+      child { node [dir] {share}}
+      }
+    child [missing] {}				
+    child [missing] {}				
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child { node [dir] {...}};
+
+\node at (4,    0) [desc] {Root file system.};
+\node at (4, -0.7) [desc] {Essential user command binaries (for use by all users).};
+\node at (4, -1.4) [desc] {Static files of the boot loader.};
+\node at (4, -2.1) [desc] {Device files.};
+\node at (4, -2.8) [desc] {Host-specific system configuration.};
+\node at (4, -3.5) [desc] {User home directories (optional).};
+\node at (4, -4.2) [desc] {Essential shared libraries and kernel modules.};
+\node at (4, -4.9) [desc] {Alternate format essential shared libraries (optional).};
+\node at (4, -5.6) [desc] {Mount point for removable media.};
+\node at (4, -6.3) [desc] {Mount point for a temporarily mounted filesystem.};
+\node at (4, -7.0) [desc] {Add-on application software packages.};
+\node at (4, -7.7) [desc] {Home directory for the root user (optional).};
+\node at (4, -8.4) [desc] {Run-time variable data.};
+\node at (4, -9.1) [desc] {System binaries.};
+\node at (4, -9.8) [desc] {Data for services provided by this system.};
+\node at (4, -10.5) [desc] {Temporary files.};
+\node at (4, -11.2) [desc] {Shareable, read-only data.};
+\node at (4, -11.9) [desc] {Most user commands.};
+\node at (4, -12.6) [desc] {Directory for standard include files.};
+\node at (4, -13.3) [desc] {Libraries for programming and packages.};
+\node at (4, -14.0) [desc] {Local hierarchy.};
+\node at (4, -14.7) [desc] {Non-essential standard system binaries.};
+\node at (4, -15.4) [desc] {Architecture-independent data.};
+\end{tikzpicture}
+\caption{File System Hiearchy: Example Filesystem Tree}\label{fig:fhs1}
+\end{figure}
+
+\begin{figure}
+\begin{tikzpicture}[%
+  dir/.style={draw=black,thick,anchor=west,draw=black,fill=black,text=white},
+  opt/.style={draw=black,thick,anchor=west,dashed,fill=gray!50},
+  desc/.style={anchor=west},
+  grow via three points={one child at (0.5,-0.7) and
+  two children at (0.5,-0.7) and (0.5,-1.4)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}
+]
+  \node [dir] {/}
+    child { node [dir] {var}
+      child { node [opt] {account}}
+      child { node [dir] {cache}}
+      child { node [opt] {crash}}
+      child { node [opt] {games}}
+      child { node [dir] {lib}}
+      child { node [dir] {lock}}
+      child { node [dir] {log}}
+      child { node [opt] {mail}}
+      child { node [dir] {opt}}
+      child { node [dir] {run}}
+      child { node [dir] {spool}}
+      child { node [dir] {tmp}}
+      child { node [opt] {yp}}
+      }
+    child [missing] {}				
+    child [missing] {}				
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child [missing] {}
+    child { node [opt] {proc}}
+    child { node [opt] {sys}};
+
+\node at (4,    0) [desc] {Root file system.};
+\node at (4, -0.7) [desc] {.};
+\node at (4, -1.4) [desc] {Process accounting logs (optional).};
+\node at (4, -2.1) [desc] {Application cache data.};
+\node at (4, -2.8) [desc] {System crash dumps (optional).};
+\node at (4, -3.5) [desc] {Variable game data (optional).};
+\node at (4, -4.2) [desc] {Variable state information.};
+\node at (4, -4.9) [desc] {Lock files.};
+\node at (4, -5.6) [desc] {Log files and directories.};
+\node at (4, -6.3) [desc] {User mailbox files (optional).};
+\node at (4, -7.0) [desc] {Variable data for /opt.};
+\node at (4, -7.7) [desc] {Run-time variable data.};
+\node at (4, -8.4) [desc] {Application spool data.};
+\node at (4, -9.1) [desc] {Temporary files preserved between system reboots.};
+\node at (4, -9.8) [desc] {Network Information Service (NIS) database files (optional).};
+\node at (4, -10.5) [desc] {Kernel and process information virtual filesystem.};
+\node at (4, -11.2) [desc] {Kernel and system information virtual filesystem.};
+\end{tikzpicture}
+\caption{File System Hiearchy: Example Filesystem Tree, continued.}\label{fig:fhs2}
+\end{figure}
+
+\section{Entry Types}
 
 A filesystem contains \emph{entries}. Every entry has a unique \emph{inode} associated with it. There are different kinds of entries. The most well-known entry types are \emph{regular files} and \emph{directories}. 
 
@@ -224,6 +383,10 @@ Character special files are entries that are handled completely by the kernel. T
 When reading or writing from them, the action that happens depends on their minor and major numbers in the kernel.
 
 \subsection{Block Device}
+
+\section{Metadata}
+
+The \verb|stat()| syscall also returns a bunch of metadata on files.
 
 \section{Permissions}
 
@@ -459,6 +622,14 @@ The archived flag is not handled by the kernel itself. It can be set to mark tha
 
 \subsubsection{Restricted}
 
+\subsubsection{Nounlink}
+
+\subsubsection{Tracked}
+
+\subsubsection{Compressed}
+
+\subsubsection{Datavault}
+
 \subsubsection{Undocumented}
 
 Not every bit in the bitfield has a name. Undocumented bits can still be set, but they have no effect. This can be used to store data.
@@ -526,7 +697,8 @@ These resource forks are a feature carried over from classic MacOS, and are not 
 
 On the other hand, \gls{fuse} filesystems also have a number of restrictions. Features like the \emph{setuid} bit or the capabilities that extended attributes allow setting on executables mean that if an unprivileged user can fully control a filesystem, a system can be easily compromised. For this reason, \gls{fuse} filesystems are more limited.
 
-
 \printglossaries
+
+\printbibliography
 
 \end{document}
