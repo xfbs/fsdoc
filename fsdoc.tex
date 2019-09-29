@@ -420,10 +420,10 @@ UNIX sports a very simple permissions model that is based on a bitmask. Every fi
 These permissions are typically either shown in octal form (such as 0755) or in text form.
 
 \begin{table}[!h]
-\centering\caption{List of Permissions}
+\centering\caption{List of Permission Bits}
 \begin{tabular}{@{}llll@{}}
 \toprule
-\textbf{Name} & Constant & \textbf{Octal} & \textbf{String}\\
+Name & Constant & Octal & String\\
 \midrule
 Owner read    & \verb|S_IRUSR| & 0400 & \verb|-r--------|\\
 Owner write   & \verb|S_IWUSR| & 0200 & \verb|--w-------|\\
@@ -670,7 +670,7 @@ The archived flag is not handled by the kernel itself. It can be set to mark tha
 
 \subsubsection{Undocumented}
 
-Not every bit in the bitfield has a name. Undocumented bits can still be set, but they have no effect. This can be used to store data.
+Not every bit in the bitfield has a name. Undocumented bits can still be set, but they have no effect. This can be used to store data. Experimenting shows that a bitmask of \verb|7F00| are bits that can be set by users that are not filtered by the system and at the same time have no effect, thus they can be used to store some information in a way that is not obvious.
 
 \section{Extended Attributes}
 
