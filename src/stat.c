@@ -49,7 +49,10 @@ const char *file_type_str(mode_t mode) {
         case S_IFREG: return "regular";
         case S_IFLNK: return "symbolic link";
         case S_IFSOCK: return "socket";
+#ifdef __APPLE__
+        // this only exists on macOS.
         case S_IFWHT: return "whiteout";
+#endif
         default: return "unknown";
     }
 }
@@ -72,6 +75,18 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+#ifdef __linux__
+    printf("inode: %li\n", stat.st_ino);
+    printf("type:  %s\n", file_type_str(stat.st_mode));
+    printf("owner: %u (%s)\n", stat.st_uid, uid_to_name(stat.st_uid));
+    printf("group: %u (%s)\n", stat.st_gid, gid_to_name(stat.st_gid));
+    printf("links: %lu\n", stat.st_nlink);
+    printf("size:  %li\n", stat.st_size);
+    printf("atime: %s\n", time_str(stat.st_atim));
+    printf("ctime: %s\n", time_str(stat.st_ctim));
+    printf("mtime: %s\n", time_str(stat.st_mtim));
+    printf("dev:   %ld\n", stat.st_dev);
+#elif __APPLE__
     printf("inode: %lli\n", stat.st_ino);
     printf("type:  %s\n", file_type_str(stat.st_mode));
     printf("owner: %u (%s)\n", stat.st_uid, uid_to_name(stat.st_uid));
@@ -88,6 +103,7 @@ int main(int argc, char *argv[]) {
     const char *flags = fflagstostr(stat.st_flags);
     printf("flags: %08x (%s)\n", stat.st_flags, flags);
     free((void *)flags);
+#endif
 
     return EXIT_SUCCESS;
 }

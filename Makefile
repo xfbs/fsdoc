@@ -1,7 +1,11 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
 BIBER	= biber
-TOOLS	= perms unlink rmdir mkdir stat chflags lsflags
+TOOLS	= perms unlink rmdir mkdir stat
+
+ifeq ($(shell uname -s),Darwin)
+	TOOLS += chflags lsflags
+endif
 
 all: fsdoc.pdf
 
