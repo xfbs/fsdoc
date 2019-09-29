@@ -148,8 +148,8 @@ int main(int argc, char *argv[]) {
     printf("links: "LINKS_FMT"\n", stat.st_nlink);
     printf("size:  "SIZE_FMT"\n", stat.st_size);
     printf("atime: %s\n", time_str(stat.st_atim));
-    printf("ctime: %s\n", time_str(stat.st_ctim));
     printf("mtime: %s\n", time_str(stat.st_mtim));
+    printf("ctime: %s\n", time_str(stat.st_ctim));
 
 #ifdef HAS_BIRTH
     printf("birth: %s\n", time_str(stat.st_btim));

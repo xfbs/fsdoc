@@ -288,24 +288,49 @@ Figures \ref{fig:fhs1} and \ref{fig:fhs2} provide an overview of the directories
 \caption{File System Hiearchy: Example Filesystem Tree, continued.}\label{fig:fhs2}
 \end{figure}
 
-\section{Entry Types}
+\section{Entries}
 
-A filesystem contains \emph{entries}. Every entry has a unique \emph{inode} associated with it. There are different kinds of entries. The most well-known entry types are \emph{regular files} and \emph{directories}. 
+A filesystem contains \emph{entries}. These are identified by the end user by a path such as \verb|/usr/local/bin/ruby|, where \verb|usr|, \verb|local| and \verb|bin| are \emph{directories} which form a hiearchy, and \verb|ruby| is a file. 
 
-Using the \emph{stat} syscall, we can ask the kernel about information on an entry. The \emph{stat} bash command performs this syscall for us and returns the information in a readable way, including the type of an entry\footnote{For more information on this sycall, check \texttt{man 7 inode} and \texttt{man 2 stat}.}.
+To the kernel, indidividual entries are identified by their \emph{inode} number, which typically is a 64-bit number. Every path (such as \verb|/usr/local/bin/ruby|), if it exists in the filesystem, resolved to an entry with an inode number. There can be multiple paths that have the same inode number. In that case, both paths refer to the same file, this is also known as a \emph{hard link}. Not all filesystems support hard links, notable \gls{apfs} does not support it.
+
+% TODO insert citation about apfs and time machine.
+
+It is possible to query the kernel for information (metadata) about an entry using the \verb|stat()| syscall. This returns a wealth of information, such as creation and access times, the inode number, and the entry type\footnote{For more information on this sycall, check \texttt{man 7 inode} and \texttt{man 2 stat}.}. 
+
+In this project there is a utility, also called \verb|stat|, which uses this syscall and returns all information returned by the kernel. The output from calling this utility on \verb|~/.bashrc| looks like this.
 
 \begin{verbatim}
 $ stat ~/.bashrc
-  File: /home/patrick/.bashrc
-  Size: 3771            Blocks: 8          IO Block: 4096   regular file
-Device: fc01h/64513d    Inode: 258084      Links: 1
-Access: (0644/-rw-r--r--)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
-Access: 2019-09-26 12:47:34.337622163 +0000
-Modify: 2019-07-23 15:41:13.075202952 +0000
-Change: 2019-07-23 15:41:13.075202952 +0000
- Birth: -  
+inode: 18785118
+type:  regular
+mode:  0644 (-rw-r--r--)
+owner: 501 (pelsen)
+group: 20 (staff)
+links: 1
+size:  17
+atime: 2019-05-01T12:49:48Z
+mtime: 2019-05-01T12:49:48Z
+ctime: 2019-05-01T12:49:48Z
+birth: 2019-05-01T12:49:48Z
+dev:   1,4
+rdev:  0,0
+gen:   0
+flags: 00000000 ()
 \end{verbatim}
-From this, we learn that \verb|~/.bashrc| is indeed a regular file. It is owned by the user with the \textsc{uid} 1000, which happens to be \emph{patrick}. 
+From the output of this utility we learn that the inode number of this particular file is 18785118. This is meaningful only to the filesystem. The type of this file is reported as a regular file. 
+
+The permissions of this file are reported as 0644, this will be explored further in section \ref{sec:permissions} on page \pageref{sec:permissions}. Every entry also has an owner and a group associated with it. In this case, the file is owned by me, \gls{uid} 501.
+
+The kernel reports how many (hard) links exist to this file. A file on the file system will have at least one link. It is possible, in Linux, to read from a file that has no links: a file is only fully removed when there are no links (entries in the filesystem to it) remain and it is not opened by any process anymore. It is thus possible to open and work with a file while another process deletes it. The behaviour here depends on the operating system, the “Windows” operating system for example does not support deleting files while they are opened by some process.
+
+The size that is reported by the kernel is the file size in bytes. In the case of a regular file, it measures the length of data that is stored in the file.
+
+The kernel reports four distinct times for this file. These are, in order of appearance, the \emph{access}, \emph{modification}, \emph{change}, and \emph{birth} times. The access time denotes the last time the file was accessed. On many systems, keeping track of this is disabled to reduce disk I/O and improve the longevity of hard drives. The modification time records the last time the contents of the file have been changed, such as by writing to it. The change time records the last time the file's status has changed, such as by changing its name or permissions. Lastly, the birth time records the time when the file was created. The Linux kernel does not support keeping track of the birth time.
+
+% birth time seems to be a macOS-only feature?
+
+% https://unix.stackexchange.com/questions/92816/can-a-file-be-retrieved-by-its-inode
 
 \subsection{Directory}
 
@@ -384,11 +409,11 @@ When reading or writing from them, the action that happens depends on their mino
 
 \subsection{Block Device}
 
-\section{Metadata}
+A block device is very similar to a character special device, in terms of how it is used and the fact that it, too, is a kind of virtual file. Block devices are also handled completely by the kernel, and are typically used as an interface to hardware. For example, \verb|/dev/sda| is a block device, and is used for communicating to the raw storage of the first hard drive attached to the system. 
 
-The \verb|stat()| syscall also returns a bunch of metadata on files.
+The actual difference between block- and character devices lies in the kernel. Character devices are devices that communicate on a byte basis, such as serial ports, whereas block devices communicate with blocks at a time. An example for this would be a hard drive, which has a native block size of, say, four kilobytes. The kernel can request a single block at a time. Therefore, reading from it is most optimal when done blockwise.
 
-\section{Permissions}
+\section{Permissions}\label{sec:permissions}
 
 UNIX sports a very simple permissions model that is based on a bitmask. Every file has an owner (user) and a group associated with it. The permissions that can be given are \emph{read}, \emph{write} and \emph{execute} for each of the owner, the group and the world (anyone). In addition to that, there is a set of special flags that can be set on entries, which are \emph{set-user-\textsc{id}}, \emph{set-group-\textsc{id}} and the \emph{sticky bit}.
 
