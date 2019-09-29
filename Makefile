@@ -1,7 +1,7 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
 BIBER	= biber
-TOOLS	= perms unlink rmdir mkdir stat
+TOOLS	= perms unlink rmdir mkdir stat chmod
 
 ifeq ($(shell uname -s),Darwin)
 	TOOLS += chflags lsflags

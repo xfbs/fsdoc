@@ -400,18 +400,21 @@ These permissions are typically either shown in octal form (such as 0755) or in 
 \toprule
 \textbf{Name} & Constant & \textbf{Octal} & \textbf{String}\\
 \midrule
-Set user ID      & \verb|S_ISUID| & 4000 & \verb|---s------|\\
-Set group ID     & \verb|S_ISGID| & 2000 & \verb|------s---|\\
-Sticky bit       & \verb|S_ISVTX| & 1000 & \verb|---------t|\\
-Read by owner    & \verb|S_IRUSR| & 0400 & \verb|-r--------|\\
-Write by owner   & \verb|S_IWUSR| & 0200 & \verb|--w-------|\\
-Execute by owner & \verb|S_IXUSR| & 0100 & \verb|---x------|\\
-Read by group    & \verb|S_IRGRP| & 0040 & \verb|----r-----|\\
-Write by group   & \verb|S_IWGRP| & 0020 & \verb|-----w----|\\
-Execute by group & \verb|S_IXGRP| & 0010 & \verb|------x---|\\
-Read by world    & \verb|S_IROTH| & 0004 & \verb|-------r--|\\
-Write by world   & \verb|S_IWOTH| & 0002 & \verb|--------w-|\\
-Execute by world & \verb|S_IXOTH| & 0001 & \verb|---------x|\\
+Owner read    & \verb|S_IRUSR| & 0400 & \verb|-r--------|\\
+Owner write   & \verb|S_IWUSR| & 0200 & \verb|--w-------|\\
+Owner execute & \verb|S_IXUSR| & 0100 & \verb|---x------|\\
+\midrule
+Group read    & \verb|S_IRGRP| & 0040 & \verb|----r-----|\\
+Group write   & \verb|S_IWGRP| & 0020 & \verb|-----w----|\\
+Group execute & \verb|S_IXGRP| & 0010 & \verb|------x---|\\
+\midrule
+Others read   & \verb|S_IROTH| & 0004 & \verb|-------r--|\\
+Others write  & \verb|S_IWOTH| & 0002 & \verb|--------w-|\\
+Others execute& \verb|S_IXOTH| & 0001 & \verb|---------x|\\
+\midrule
+Set \gls{uid} & \verb|S_ISUID| & 4000 & \verb|---s------|\\
+Set \gls{gid} & \verb|S_ISGID| & 2000 & \verb|------s---|\\
+Sticky bit    & \verb|S_ISVTX| & 1000 & \verb|---------t|\\
 \bottomrule  
 \end{tabular}
 \end{table}
@@ -434,11 +437,19 @@ cat: file: Permission denied
 
 \subsection{Read}
 
+The read permission is needed to open a file in reading mode. For directories, the read permission bit is needed to enumerate the contents with \verb|opendir()| and \verb|readdir()|.
+
 \subsection{Write}
+
+The write permission is needed to open a file in writing mode. For directories, the write bit is needed to create new entries into it.
 
 \subsection{Execute}
 
-The execute bit has a different meaning for directories. If it is not set, the contents of the directory can't be enumerated with \verb|readdir()|. 
+The execute bit is needed to execute files as binaries. This is needed to run native binaries, but also shell scripts with a hashbang or anything that goes through the Linux kernel binfmt handlers.
+
+% https://ownyourbits.com/2018/05/23/the-real-power-of-linux-executables/
+
+The execute bit has a different meaning for directories. If it is not set, it is not possible to \verb|chdir()| into a directory.
 
 \subsection{Set UID and Set GID}
 
@@ -463,6 +474,8 @@ euid 0 (root)
 egid 1000 (patrick)  
 \end{verbatim}
 This functionality is used in executables that need extra capabilities but should be usable by non-root users as well. Examples for this are the \verb|/bin/ping| utility, which needs raw access to generate \gls{icmp} ping packets, or \verb|/usr/bin/sudo|, which grants superuser rights to regular users depending on its configuration.
+
+However, since Linux kernel version 2.2, the capabilities granted to a superuser have been split up into more finer-grained capabilities, and using extended attributes, one can grant specific capabilities to executables without having to give it full superuser rights. This is recommended, but not done by most major Linux distributions.
 
 \subsection{Sticky bit}
 

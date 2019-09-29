@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <time.h>
 
+/* platform-specific settings */
 #ifdef __APPLE__
 #define HAS_GEN
 #define HAS_FLAGS
@@ -78,6 +79,9 @@ const char *file_type_str(mode_t mode) {
     }
 }
 
+/* create a modestring, like "-rwxr-xr-x". there is the strmode() function to
+ * do this on BSD systems, but afaik it doesn't exist on linux.
+ */
 const char *mode_str(mode_t mode, char str[11]) {
     switch(mode & S_IFMT) {
         case S_IFIFO: str[0] = 'p'; break;
@@ -88,7 +92,7 @@ const char *mode_str(mode_t mode, char str[11]) {
         case S_IFLNK: str[0] = 'l'; break;
         case S_IFSOCK: str[0] = 's'; break;
 #ifdef __APPLE__
-        // this only exists on macOS.
+        /* this only exists on macOS. */
         case S_IFWHT: str[0] = 'w'; break;
 #endif
         default: str[0] = '?'; break;
