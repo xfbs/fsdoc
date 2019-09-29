@@ -8,6 +8,27 @@
 #include <assert.h>
 #include <time.h>
 
+#ifdef __APPLE__
+#define HAS_GEN
+#define HAS_FLAGS
+#define HAS_BIRTH
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
+#define st_btim st_birthtimespec
+#define INODE_FMT "%lli"
+#define LINKS_FMT "%hu"
+#define SIZE_FMT "%lli"
+#define DEV_FMT "%d"
+#endif
+
+#ifdef __linux__
+#define INODE_FMT "%li"
+#define LINKS_FMT "%lu"
+#define SIZE_FMT "%li"
+#define DEV_FMT "%ld"
+#endif
+
 const char *uid_to_name(uid_t uid) {
     struct passwd *passwd = getpwuid(uid);
     assert(passwd && passwd->pw_name);
@@ -57,6 +78,42 @@ const char *file_type_str(mode_t mode) {
     }
 }
 
+const char *mode_str(mode_t mode, char str[11]) {
+    switch(mode & S_IFMT) {
+        case S_IFIFO: str[0] = 'p'; break;
+        case S_IFCHR: str[0] = 'c'; break;
+        case S_IFDIR: str[0] = 'd'; break;
+        case S_IFBLK: str[0] = 'b'; break;
+        case S_IFREG: str[0] = '-'; break;
+        case S_IFLNK: str[0] = 'l'; break;
+        case S_IFSOCK: str[0] = 's'; break;
+#ifdef __APPLE__
+        // this only exists on macOS.
+        case S_IFWHT: str[0] = 'w'; break;
+#endif
+        default: str[0] = '?'; break;
+    }
+
+    str[1] = (mode & S_IRUSR) ? 'r' : '-';
+    str[2] = (mode & S_IWUSR) ? 'w' : '-';
+    str[3] = (mode & S_IXUSR) ?
+        ((mode & S_ISUID) ? 's' : 'x') :
+        ((mode & S_ISUID) ? 'S' : '-') ;
+
+    str[4] = (mode & S_IRGRP) ? 'r' : '-';
+    str[5] = (mode & S_IWGRP) ? 'w' : '-';
+    str[6] = (mode & S_IXGRP) ? 'x' : '-';
+
+    str[7] = (mode & S_IROTH) ? 'r' : '-';
+    str[8] = (mode & S_IWOTH) ? 'w' : '-';
+    str[9] = (mode & S_IXOTH) ? 'x' : '-';
+
+    /* null-terminate string */
+    str[10] = 0;
+
+    return str;
+}
+
 int main(int argc, char *argv[]) {
     /* make sure an argument was given */
     if(argc != 2) {
@@ -75,31 +132,30 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-#ifdef __linux__
-    printf("inode: %li\n", stat.st_ino);
+    char modestr[11];
+
+    printf("inode: "INODE_FMT"\n", stat.st_ino);
     printf("type:  %s\n", file_type_str(stat.st_mode));
+    printf("mode:  %04o (%s)\n", stat.st_mode & 07777, mode_str(stat.st_mode, modestr));
     printf("owner: %u (%s)\n", stat.st_uid, uid_to_name(stat.st_uid));
     printf("group: %u (%s)\n", stat.st_gid, gid_to_name(stat.st_gid));
-    printf("links: %lu\n", stat.st_nlink);
-    printf("size:  %li\n", stat.st_size);
+    printf("links: "LINKS_FMT"\n", stat.st_nlink);
+    printf("size:  "SIZE_FMT"\n", stat.st_size);
     printf("atime: %s\n", time_str(stat.st_atim));
     printf("ctime: %s\n", time_str(stat.st_ctim));
     printf("mtime: %s\n", time_str(stat.st_mtim));
-    printf("dev:   %ld\n", stat.st_dev);
-#elif __APPLE__
-    printf("inode: %lli\n", stat.st_ino);
-    printf("type:  %s\n", file_type_str(stat.st_mode));
-    printf("owner: %u (%s)\n", stat.st_uid, uid_to_name(stat.st_uid));
-    printf("group: %u (%s)\n", stat.st_gid, gid_to_name(stat.st_gid));
-    printf("links: %hu\n", stat.st_nlink);
-    printf("size:  %lli\n", stat.st_size);
-    printf("atime: %s\n", time_str(stat.st_atimespec));
-    printf("ctime: %s\n", time_str(stat.st_ctimespec));
-    printf("mtime: %s\n", time_str(stat.st_mtimespec));
-    printf("birth: %s\n", time_str(stat.st_birthtimespec));
-    printf("dev:   %d\n", stat.st_dev);
-    printf("gen:   %u\n", stat.st_gen);
 
+#ifdef HAS_BIRTH
+    printf("birth: %s\n", time_str(stat.st_btim));
+#endif
+
+    printf("dev:   "DEV_FMT"\n", stat.st_dev);
+
+#ifdef HAS_GEN
+    printf("gen:   %u\n", stat.st_gen);
+#endif
+
+#ifdef HAS_FLAGS
     const char *flags = fflagstostr(stat.st_flags);
     printf("flags: %08x (%s)\n", stat.st_flags, flags);
     free((void *)flags);

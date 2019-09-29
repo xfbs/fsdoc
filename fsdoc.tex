@@ -396,22 +396,22 @@ These permissions are typically either shown in octal form (such as 0755) or in 
 
 \begin{table}[!h]
 \centering\caption{List of Permissions}
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}llll@{}}
 \toprule
-\textbf{Name} & \textbf{Octal} & \textbf{String}\\
+\textbf{Name} & Constant & \textbf{Octal} & \textbf{String}\\
 \midrule
-Set user ID      & 4000 & \verb|---s------|\\
-Set group ID     & 2000 & \verb|------s---|\\
-Sticky bit       & 1000 & \verb|---------t|\\
-Read by owner    & 0400 & \verb|-r--------|\\
-Write by owner   & 0200 & \verb|--w-------|\\
-Execute by owner & 0100 & \verb|---x------|\\
-Read by group    & 0040 & \verb|----r-----|\\
-Write by group   & 0020 & \verb|-----w----|\\
-Execute by group & 0010 & \verb|------x---|\\
-Read by world    & 0004 & \verb|-------r--|\\
-Write by world   & 0002 & \verb|--------w-|\\
-Execute by world & 0001 & \verb|---------x|\\
+Set user ID      & \verb|S_ISUID| & 4000 & \verb|---s------|\\
+Set group ID     & \verb|S_ISGID| & 2000 & \verb|------s---|\\
+Sticky bit       & \verb|S_ISVTX| & 1000 & \verb|---------t|\\
+Read by owner    & \verb|S_IRUSR| & 0400 & \verb|-r--------|\\
+Write by owner   & \verb|S_IWUSR| & 0200 & \verb|--w-------|\\
+Execute by owner & \verb|S_IXUSR| & 0100 & \verb|---x------|\\
+Read by group    & \verb|S_IRGRP| & 0040 & \verb|----r-----|\\
+Write by group   & \verb|S_IWGRP| & 0020 & \verb|-----w----|\\
+Execute by group & \verb|S_IXGRP| & 0010 & \verb|------x---|\\
+Read by world    & \verb|S_IROTH| & 0004 & \verb|-------r--|\\
+Write by world   & \verb|S_IWOTH| & 0002 & \verb|--------w-|\\
+Execute by world & \verb|S_IXOTH| & 0001 & \verb|---------x|\\
 \bottomrule  
 \end{tabular}
 \end{table}
