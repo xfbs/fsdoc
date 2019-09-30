@@ -79,7 +79,15 @@ We will look at what kinds of filesystems exist in the Linux kernel, and how the
 
 All that is required for following along is a bit of experience with the Linux command line. MacOS also works, but has a slightly different set of features that are also addressed. Windows users may want to install WSL, but we will also take a look at some Windows-specific quirks.
 
-This document comes with some code for utilities to work with the file system. These should be compiled and used. All command line examples in this document use these utilities rather than similarly named ones shipped with your system, unless noted otherwise.
+This document comes with some code for utilities to work with the file system. These should be compiled and used. All command line examples in this document use these utilities rather than similarly named ones shipped with your system, unless noted otherwise. Knowledge of C and reading the code is recommended, as it showcases how the syscalls used to interact with the filesystem are used.
+
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-devices.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-intro.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-implementation.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-ffs.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-lfs.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-journaling.pdf
+% http://pages.cs.wisc.edu/~remzi/OSTEP/file-dialogue.pdf
 
 \section{History}
 
@@ -106,25 +114,41 @@ In this case, we learn that the filesystem in use is from the \textsc{ext} famil
 
 The most common filesystem used on Linux is \verb|ext4|, but there are plenty others. Filesystems supported by Linux are \verb|ext|, \verb|ext2|, \verb|ext3|, \verb|ext4|, \verb|hpfs|, \verb|iso9660|, \verb|JFS|, \verb|minix|, \verb|msdos|, \verb|ncpfs nfs|, \verb|ntfs|, \verb|proc|, \verb|Reiserfs|, \verb|smb|, \verb|sysv|, \verb|umsdos|, \verb|vfat|, \verb|XFS|, \verb|xiafs|.
 
-\subsection{\glsdesc*{ext} family}
+If you want to learn more about filesystems and how they are actually implemented on-disk, the book \emph{Operating Systems: Three Easy Pieces} is a good start \cite{ostep}.
 
-The \gls{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth.
+\subsection{EXT family}
 
-\subsection{\glsdesc*{fat} family}
+The \gls{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth \cite{osdev:ext2,ext2-doc,ext2-impl}.
+
+% https://de.wikipedia.org/wiki/Minix-Dateisystem
+
+Linux Torvalds was using a machine running MINIX as he was developing the Linux kernel in 1991. To make sharing disks between his MINIX host and Linux easier, he decided to adopt MINIX's filesystem. MINIX is intended as an educational system, focussing more teaching structures and patterns of operating systems and file systems rather than usability. Hence, the \emph{minix} filesystem came with a lot of limitations, including limiting partition sizes to 64 MiB, file names to 14 (or 30 in newer versions) characters. It also does not offer any provisions for storing extended metadata and attributes.
+
+% what is inode immutability?
+
+The \emph{Extended File System} was quickly created in 1992 to address the limitations of the \emph{minix} filesystem. It allowed partition sizes of up to 2 GiB, and changed the file name size limit to 255 characters. This fixed some issues, but it was not enough to make Ext a viable file system. Notably, there was still no support for extended modification times metadata, and it suffered from performance issues due to using linked lists, which would over time become unsorted and fragmented\cite{ext2-doc}. 
+
+As a result, in 1993 an alpha version of the \emph{Second Extended File System} was released. This introduced a maximum partition size of 2 TiB, along with support for extended metadata and performance improvements. Although newer file systems have been designed, such as Ext3 and Ext4, the Second Extended Filesystem is still preferred on flash drives as it requires fewer write operations (since it has no journal). 
+
+Later, Ext2 was extended a few more times, leading to Ext3 in 2001 and Ext4 in 2008. The structures of Ext3 and Ext4 are based on Ext2 and add some additional options such as journaling, journal checksums, extents, online defragmentation, delayed allocations and larger directories to name but a few\cite{ext2-doc}.
+
+Ext4 is currently the de-facto default filesystem for Linux systems, as it has been thoroughly battle-tested over the years, and offers good performance and reliability due to being a journaled filesystem. 
+
+\subsection{FAT family}
 
 The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \gls{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium.
 
 The principal difference between these drivers is the amount of emulation for \textsc{unix} features they provide. The \emph{msdos} driver supports almost no \textsc{unix} features, such as file permissions, attributes, and only filenames with a length of 8 characters, optionally followed by a dot and a three-character extension.
 
-\subsection{\glsdesc*{ntfs}}
+\subsection{NTFS}
 
 The \gls{ntfs} is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate file streams}.
 
-\subsection{\glsdesc*{hfs+}}
+\subsection{HFS+}
 
 The \gls{hfs+} is a filesystem currently used by Apple on their whole product range.
 
-\subsection{\glsdesc*{apfs}}
+\subsection{APFS}
 
 The \gls{apfs} is a new filesystem developed by Apple and used across their product range. It is optimised for newer \gls{ssd} storage and has some unique features, such as filesystem snapshots, native full disk encryption, metadata integrity with checksums, and space sharing.
 
