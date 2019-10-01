@@ -494,7 +494,7 @@ Note that a directory may only be deleted if it is empty. Calling \verb|rmdir| o
 
 \begin{verbatim}
 $ mkdir folder 644
-$ touch folder/file
+$ mkfile folder/file 644
 $ rmdir folder
 rmdir: failed to remove 'folder/': Directory not empty
 \end{verbatim}
@@ -516,27 +516,117 @@ The directory contents are returned in no particular order. Here you can also se
 
 \subsection{Regular File}
 
-Regular files are what we think of when we think of files. They contain data, and can be written to and read from.
+Regular files are what we think of when we think of files. They contain data, and can be written to and read from. They are reported by the \verb|stat| tool as \emph{regular}.
+
+Files can be created with the \verb|open()| sycall with the \verb|O_CREAT| flag, and they can be deleted with the \verb|unlink()| syscall. There is a tool, \verb|mkfile|, that can be used to create regular files, and a tool, \verb|unlink| that can be used to delete them.
+
+\begin{verbatim}
+$ mkfile file 644
+$ lsdir .
+file
+.
+..
+$ unlink file
+$ lsdir .
+.
+..
+\end{verbatim}
+After using the \verb|open()| syscall to open them, which returns a \emph{file descriptor} (an integer representing the open file), depending on the mode they were opened as, files can be read from and written to using the \verb|read()| and \verb|write()| syscalls, and finally closed with the \verb|close()| syscall.
 
 \begin{verbatim}
 $ echo hi > filename
 $ cat filename
 hi  
 \end{verbatim}
-The \emph{stat} tool output shows us that folders have a basic amount of metadata attached to them.
+Not only can regular files be opened, written to and read from this way, it also applies to a lot of other file types.
 
-\begin{verbatim}
-  File: file
-  Size: 0               Blocks: 0          IO Block: 4096   regular empty file
-Device: fc01h/64513d    Inode: 258817      Links: 1
-Access: (0664/-rw-rw-r--)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
-Access: 2019-09-26 14:41:37.221013724 +0000
-Modify: 2019-09-26 14:41:37.221013724 +0000
-Change: 2019-09-26 14:41:37.221013724 +0000
- Birth: -
-\end{verbatim}
+There is a number of modes that files can be opened as. Not all modes are available on all operating systems, and not all modes work for all files.
 
-Files can be created with the \verb|open()| sycall with the \verb|O_CREAT| flag, written and read to with \verb|write()| and \verb|read()|, and deleted with \verb|unlink()|.
+\begin{table}
+\renewcommand{\arraystretch}{1.2}
+\centering\caption{List of Flags for the Open Syscall}\label{tbl:oflags}
+\begin{tabular}{@{}p{2cm}p{7.5cm}p{1.5cm}@{}}
+\toprule
+Name & Description & Notes\\
+\midrule
+\verb|O_RDONLY|
+& Open file as read-only.
+&\\
+\verb|O_WRONLY|
+& Open file as write-only.
+&\\
+\verb|O_RDWR|
+& Open file for reading and writing.
+&\\
+\verb|O_NONBLOCK|, \verb|O_NDELAY|
+& When possible, the file is opened in non-blocking mode, meaning that operations on the file will not cause the process to wait.
+&\\
+\verb|O_APPEND|
+& Open file in append-only mode for writing.
+&\\
+\verb|O_CREAT|
+& Create the file (if it doesn't exist).
+&\\
+\verb|O_TRUNC|
+& Set the file's length to zero.
+&\\
+\verb|O_EXCL|
+& When creating the file, fail if it already exists.
+&\\
+\verb|O_SHLOCK|
+& Atomically obtain a shared lock.
+& macOS\\
+\verb|O_EXLOCK|
+& Atomically obtain an exclusive lock.
+& macOS\\
+\verb|O_NOFOLLOW|
+& Fail if the given path name is a symbolic link.
+&\\
+\verb|O_SYMLINK|
+& Allow opening of symlinks. % what does this do?
+& macOS\\
+\verb|O_EVTONLY|
+& Only deliver event notifications.
+& macOS\\
+\verb|O_CLOEXEC|
+& Close this file descriptor on \verb|exec()|.
+&\\
+\verb|O_ASYNC|
+&
+& Linux\\
+\verb|O_DIRECT|
+&
+& Linux\\
+\verb|O_DIRECTORY|
+&
+& Linux\\
+\verb|O_DSYNC|
+&
+& Linux\\
+\verb|O_LARGEFILE|
+&
+& Linux\\
+\verb|O_NOATIME|
+& Don't update the access time when the file is read.
+& Linux\\
+\verb|O_NOCTTY|
+&
+& Linux\\
+\verb|O_PATH|
+&
+& Linux\\
+\verb|O_SYNC|
+& Write synchronously to the file, meaning that write operations only return when the data is on the disk.
+& Linux\\
+\verb|O_TMPFILE|
+& Treat path as directory, create temporary unnamed file in this directory which is closed when the file descriptor is closed. 
+& Linux\\
+\bottomrule
+\end{tabular}
+
+\footnotesize
+See \texttt{man 2 open} for more information on these flags.
+\end{table}
 
 \subsection{Symbolic Link}
 
