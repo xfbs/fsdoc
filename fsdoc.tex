@@ -131,7 +131,7 @@ The most common filesystem used on Linux is \verb|ext4|, but there are plenty ot
 
 If you want to learn more about filesystems and how they are actually implemented on-disk, the book \emph{Operating Systems: Three Easy Pieces} is a good start \cite{ostep}.
 
-\subsection{EXT family}
+\subsection{Extended File System (EXT) family}
 
 % https://de.wikipedia.org/wiki/Minix-Dateisystem
 
@@ -147,7 +147,7 @@ Later, Ext2 was extended a few more times, leading to Ext3 in 2001 and Ext4 in 2
 
 Ext4 is currently the de-facto default filesystem for Linux systems, as it has been thoroughly battle-tested over the years, and offers good performance and reliability due to being a journaled filesystem. In this paper, we will take an in-depth look at all of the features offered by Ext4.
 
-\subsection{FAT family}
+\subsection{File Allocation Table (FAT) family}
 
 The \gls{fat} family of filesystems was designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium\cite{sd-assoc}.
 
@@ -202,19 +202,19 @@ umsdos & Yes & Yes & Can host Linux.\\
 
 The \emph{msdos} driver performs no hackery at all, exposing only the bare minimum of features supported by the file system. The \emph{vfat} driver performs the same hackery that is done by current “Windows” operating systems, supporting \gls{lfn}. The \emph{umsdos} driver supports the whole range of \textsc{unix} file semantics, but at the expense of compatibility with other operating systems, storing any extra information in a hidden file labelled \verb|--LINUX-.---|.
 
-\subsection{NTFS}
+\subsection{New Technology File System (NTFS)}
 
 % todo explain a bit of history and features
 
 The \gls{ntfs} is the filesystem currently used by Windows. It supports a lot of the advanced features that modern filesystems have, and even some obscure ones like \emph{alternate data streams}, which are similar to macOS's \emph{resource forks}, and are examined in Section \ref{sec:ads}
 
-\subsection{HFS+}
+\subsection{Hierarchical File System Plus (HFS+)}
 
 % todo explain a bit of history and features
 
 The \gls{hfs+} is a filesystem currently used by Apple on their whole product range. It was introduced in 1998 to replace \textsc{hfs}, the predecessor that was used up until Mac OS 8.0. It supports all of the features expected from a modern filesystem, and also supports some interesting leftovers, such as \emph{resource forks}.
 
-\subsection{APFS}
+\subsection{Apple File System (APFS)}
 
 The \gls{apfs} is a new filesystem developed by Apple and used across their product range. It is optimised for newer \gls{ssd} storage and has some unique features, such as filesystem snapshots, native full disk encryption, metadata integrity with checksums, and space sharing.
 
@@ -326,9 +326,9 @@ Table \ref{tbl:specialpaths} gives an overview of all the special paths usable i
     }
     child [sibling distance=6em] {node [dir] {lib}}
   };
-\draw[dashed,black] (-7.5,-0.55) rectangle (0,-4);
+\draw[dashed,black] (-7.4,-0.55) rectangle (-0.1,-4);
 \node at (-6.5,-0.75) {\verb|/dev/sda2|};
-\draw[dashed,black] (-7.65,0.35) rectangle (4.5,-4.15);
+\draw[dashed,black] (-7.55,0.35) rectangle (4.5,-4.15);
 \node at (-6.5,0.15) {\verb|/dev/sda4|};
 \end{tikzpicture}
 \caption{Illustration of Filesystem mounted in VFS}\label{fig:vfs}
@@ -1073,7 +1073,7 @@ POSIX Extended Attributes are divided into different namespaces. The \emph{user}
 
 \section{Alternate Data Streams}\label{sec:ads}
 
-\subsection{HFSs+ Resource Fork}
+\subsection{HFS+ Resource Fork}
 
 A resource fork is a section of a file besides the file's actual contents that can be used to store structured data besides the unstructured data of the file itself. They appear as the extended attribute \verb|com.apple.ResourceFork|. 
 
