@@ -3,9 +3,10 @@
 
 % typography: load CMU fonts to get bold small caps.
 \usepackage{fontspec}
-\setsansfont{CMU Sans Serif}
-\setmainfont{CMU Serif}
-\setmonofont{CMU Typewriter Text}
+%\setsansfont{CMU Sans Serif}
+%\setmainfont{CMU Serif}
+%\setmonofont{CMU Typewriter Text}
+\usepackage{lmodern}
 \usepackage{microtype}
 
 % references
@@ -60,6 +61,7 @@
 \newabbreviation{fuse}{fuse}{Filesystem In Userspace}
 \newabbreviation{lsb}{lsb}{Linux Standard Base}
 \newabbreviation{fhs}{fhs}{Filesystem Hiearchy Standard}
+\newabbreviation{lfn}{lfn}{Long File Names}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -136,9 +138,58 @@ Ext4 is currently the de-facto default filesystem for Linux systems, as it has b
 
 \subsection{FAT family}
 
-The \verb|msdos|, \verb|umsdos| and \verb|vfat| filesystems all belong to the \gls{fat} family of filesystems designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium.
+The \gls{fat} family of filesystems was designed by Microsoft in 1977. They have a lot of limitations compared to modern filesystems, but are very simple to implement, and hence \gls{fat} is still used today, for example required by the SD Consortium\cite{sd-assoc}.
 
-The principal difference between these drivers is the amount of emulation for \textsc{unix} features they provide. The \emph{msdos} driver supports almost no \textsc{unix} features, such as file permissions, attributes, and only filenames with a length of 8 characters, optionally followed by a dot and a three-character extension.
+% https://www.cs.drexel.edu/~jjohnson/2012-13/fall/cs370/resources/File%20Allocation%20Table.pdf
+
+% https://www.win.tue.nl/~aeb/linux/fs/fat/fat-1.html
+
+The \gls{fat} filesystem comes in a number of flavours, which have been developed over time and consist of extensions and fixes. Table \ref{tbl:fatfs} shows a list of the versions of \gls{fat} and their properties. The higher the cluster size, the larger the volume can be, but the more space is wasted as well.
+
+\begin{table}[!h]
+\centering\caption{FAT Filesystem Flavours}\label{tbl:fatfs}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Flavour & File names & File size & Volume size\\
+\midrule
+FAT8 & 6.3/9 & 8 MB &\\
+FAT12 & 8.3 & 1 & 16 MiB (4 KiB cluster)\\
+FAT16 & 8.3 & 1 & 2 GiB (32 KiB cluster)\\
+FAT32 & 8.3 & 2 GiB & 2 TiB (32 KiB cluster)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% https://en.wikipedia.org/wiki/Device_file#DOS,_TOS,_OS/2,_and_Windows
+
+The original \gls{fat} filesystem was designed and implemented around 1977. It was used for some of Microsoft's products, and did not support sub-directories, instead storing all files in the root directory. On remnant of this time still exists in the “Windows” series of operating systems. Unlike \textsc{unix}, which puts special device files (these will be discussed later) like \verb|/dev/ttyS0|, which is used to access the serial console, into the \verb|/dev| directory, Windows has them exist in \emph{every directory on the system}. So, on Windows, every directory contains a virtual \verb|COM1| file used for reading to and from the first serial console.
+
+\gls{fat}12 was introduced in 1980, changing the \emph{File Allocation Table} elements to be 12 bits instead of 8 like in the original \gls{fat}. It also changes the file name restrictions from 6.3 (six-characters, followed by an optional dot, followed by a three-character extension) to 8.3. \gls{fat}12 was eventually extended to support sub-directories as well.
+
+In 1984, \gls{fat}16 was released, further increasing the size of the File Allocation Table entries to 16 bits.
+
+\gls{fat} was changed once more to keep up with hard drive developments in 1996 to create \gls{fat}32, which allows for even larger file and volume sizes. At this time, a hack to support \gls{lfn} was also introduced, bringing file name length restrictions up to the common standard supported by more capable operating systems, which is 255 characters. This was done by hacking special directory entries holding the long file names, which are hidden from non-aware implementations.
+
+Linux ships a whopping three different drivers for the \gls{fat} family of filesystems: the \emph{msdos}, \emph{umsdos} and \emph{vfat} drivers. The principal difference between these drivers is the amount of emulation for \textsc{unix} features they provide. As \gls{fat} has no native support for many features that are found on a standard \textsc{unix} system, such as extended attributes, fine-grained permissions, long file names, support for these has to be achieved with varying levels of hackery.
+
+% https://en.wikipedia.org/wiki/FAT_filesystem_and_Linux
+
+\begin{table}
+\centering\caption{FAT File System Drivers in Linux}\label{tbl:fathack}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Driver & LFN & UNIX File Semantics & Notes\\
+\midrule
+msdos & No & No & Filenames limited to 8.3.\\
+vfat & Yes & No & Windows-compatible.\\
+umsdos & Yes & Yes & Can host Linux.\\
+\bottomrule
+\end{tabular}  
+\end{table}
+
+
+The \emph{msdos} driver performs no hackery at all, exposing only the bare minimum of features supported by the file system. The \emph{vfat} driver performs the same hackery that is done by current “Windows” operating systems, supporting \gls{lfn}. The \emph{umsdos} driver supports the whole range of \textsc{unix} file semantics, but at the expense of compatibility with other operating systems, storing any extra information in a hidden file labelled \verb|--LINUX-.---|.
 
 \subsection{NTFS}
 
@@ -164,9 +215,66 @@ proc sbin sys   var
 \end{verbatim}
 Other filesystems are mounted in directories under \verb|/|. This means the root file system is actually a virtual file systems: it is not one single file systems, but it is rather comprised of a number of different file systems mounted in different folders. 
 
+A hiearchical filessytem should be imagined as a tree. This is why the slash was chosen as a path separator, because it is slanted forward and signifies that whatever comes before it is higher in the hiearchy than what comes after it\footnote{There are some obscure systems that use the backslash character ‘\texttt{\textbackslash}’ as a path separator for curious historical reasons.}.
+\begin{figure}[!h]
+\centering
+\begin{tikzpicture}[
+  dir/.style={rectangle,draw,fill=black,text=white},
+  file/.style={rectangle,draw},
+  exe/.style={rectangle,draw=red!70!black,text=red!70!black},
+  level 1/.style={sibling distance=17em,level distance=6ex},
+  level 2/.style={sibling distance=5em,level distance=6ex},
+]
+
+\node [dir] {\verb|/|}
+  [edge from parent fork down]
+  child {node [dir] {home}
+    child [sibling distance=12em] {node [dir] {patrick}
+      child [sibling distance=8em] {node [dir] {docs}
+        child {node [file] {fsdoc.pdf}}
+      }
+      child [sibling distance=8em] {node [dir] {code}
+        child [sibling distance=5em] {node [file] {stat.c}}
+        child [sibling distance=5em] {node [file] {chmod.c}}
+      }
+    }
+    child [sibling distance=12em] {node [dir] {ophelia}}
+  }
+  child { node [dir] {usr}
+    child [sibling distance=6em] { node [dir] {bin}
+      child [sibling distance=5em] {node [exe] {bash}}
+      child [sibling distance=5em] {node [exe] {vim}}
+    }
+    child [sibling distance=6em] {node [dir] {lib}}
+  };
+\end{tikzpicture}
+\caption{File Hiearchy Tree}\label{fig:fstree}
+\end{figure}
+Figure \ref{fig:fstree} shows an example of how a (minimal) filesystem could be visualised. Black nodes in this tree represent directories, white nodes regular files and red nodes executable files. The difference between these will be examined in the next section. Getting the path to a file like \verb|stat.c| is done by simply joining all the names of the nodes on the path from the root to the file, in this case \verb|/home/patrick/code/stat.c|.
+
+\subsection{Special Paths}
+
+There are some conventions regarding special paths used to navigate directory hiearchies. The directory \verb|.| refers to the current directory, so in a path like \verb|/path/to/./file/|, the \verb|.| does not change the path. The \verb|..| however refers to the previous (upper) directory. Therefore, a path such as \verb|/path/to/other/dir/../../file| is equivalent to \verb|/path/to/file|.
+
+Another convention is the special syntax for home directories. Specifying \verb|~patrick| refers to the home directory for the user \emph{patrick}, which is \verb|/home/patrick|. Specifying \verb|~root| refers to \verb|/root|, the home directory for the \emph{root} user, which is the highest-privileged user on \textsc{unix} systems.
+
 % todo: lsmount util to list mounted?
 
 % Every entry in the file hiearchy has an \emph{inode} number associated with it, uniquely identifying the file (entry).
+
+\begin{table}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Path & Description\\
+\midrule
+\texttt{.} & Current directory\\
+\texttt{..} & Parent directory\\
+\texttt{\textasciitilde} & Home directory (of current user)\\
+\texttt{\textasciitilde username} & Home directory (of username)\\
+\bottomrule
+\end{tabular}  
+\end{table}
+
 
 \subsection{Mounting}
 
@@ -717,7 +825,7 @@ POSIX Extended Attributes are divided into different namespaces. The \emph{user}
 
 \section{Alternate File Streams}
 
-\subsection{\gls{hfs+} Resource Fork}
+\subsection{HFSs+ Resource Fork}
 
 A resource fork is a section of a file besides the file's actual contents that can be used to store structured data besides the unstructured data of the file itself. They appear as the extended attribute \verb|com.apple.ResourceFork|. 
 
@@ -741,7 +849,7 @@ $ ls -l@ file
 
 These resource forks are a feature carried over from classic MacOS, and are not really used anymore. In fact, the \gls{api} to access them, \emph{Resource Manager}, have been removed. There are, to the best of my knowledge, no other named forks apart from the resource fork exposed.
 
-\subsection{\gls{ntfs} Alternate Data Streams}
+\subsection{NTFS Alternate Data Streams}
 
 % https://www.borncity.com/blog/2018/09/22/infos-zu-windows-ntfs-alternative-data-streams/
 
