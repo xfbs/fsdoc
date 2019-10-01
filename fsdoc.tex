@@ -81,7 +81,16 @@ We will look at what kinds of filesystems exist in the Linux kernel, and how the
 
 All that is required for following along is a bit of experience with the Linux command line. MacOS also works, but has a slightly different set of features that are also addressed. Windows users may want to install WSL, but we will also take a look at some Windows-specific quirks.
 
+\subsection{Tools}
+
 This document comes with some code for utilities to work with the file system. These should be compiled and used. All command line examples in this document use these utilities rather than similarly named ones shipped with your system, unless noted otherwise. Knowledge of C and reading the code is recommended, as it showcases how the syscalls used to interact with the filesystem are used.
+
+In order to compile and use the tools, a \emph{makefile} is provided. To compile them, ensure you have the \emph{make} tool and a modern C compiler installed (\emph{gcc} and \emph{clang} are recommended, but others should work, too). Then call the makefile with the \emph{tools} target to compile all the tools appropriate for your system.
+
+\begin{verbatim}
+$ make tools
+\end{verbatim}
+The tools are tested to work on Linux and macOS, and might also work on BSD systems. Not all tools work on all systems, due to differences in the functionality provided by the kernel.
 
 % http://pages.cs.wisc.edu/~remzi/OSTEP/file-devices.pdf
 % http://pages.cs.wisc.edu/~remzi/OSTEP/file-intro.pdf
@@ -99,7 +108,11 @@ DOS, the predecessor of the popular Windows operating system, had a comparativel
 
 \section{Filesystems}
 
-Filesystems define how the structures we can work with (directories, files) and their metadata are stored on disk. As such, they are implemented in the kernel. 
+Filesystems define how the structures we can work with (directories, files) and their metadata is stored on disk. As such, they are implemented in the kernel. 
+
+The kernel provides an abstraction to work with filesystems using syscalls, which are used to interact with them. Practically, it should not matter what filesystem type is being used, but in practise there can be observable differences, such as when certain filesystems don't implement some features, or when they are slow for certain operations, due to using simpler but less efficient data structures.
+
+
 
 Finding out what filesystem is in use can be accomplished with the \emph{stat} command.
 
@@ -120,8 +133,6 @@ If you want to learn more about filesystems and how they are actually implemente
 
 \subsection{EXT family}
 
-The \gls{ext} family of filesystems derive from the \verb|minix| filesystem, that has been extensively extended to support additional metadata, journaling, and improve performance and reliability. Since this family of filesystems is very common on Linux machines, its feature set will be studied in-depth \cite{osdev:ext2,ext2-doc,ext2-impl}.
-
 % https://de.wikipedia.org/wiki/Minix-Dateisystem
 
 Linux Torvalds was using a machine running MINIX as he was developing the Linux kernel in 1991. To make sharing disks between his MINIX host and Linux easier, he decided to adopt MINIX's filesystem. MINIX is intended as an educational system, focussing more teaching structures and patterns of operating systems and file systems rather than usability. Hence, the \emph{minix} filesystem came with a lot of limitations, including limiting partition sizes to 64 MiB, file names to 14 (or 30 in newer versions) characters. It also does not offer any provisions for storing extended metadata and attributes.
@@ -130,11 +141,11 @@ Linux Torvalds was using a machine running MINIX as he was developing the Linux 
 
 The \emph{Extended File System} was quickly created in 1992 to address the limitations of the \emph{minix} filesystem. It allowed partition sizes of up to 2 GiB, and changed the file name size limit to 255 characters. This fixed some issues, but it was not enough to make Ext a viable file system. Notably, there was still no support for extended modification times metadata, and it suffered from performance issues due to using linked lists, which would over time become unsorted and fragmented\cite{ext2-doc}. 
 
-As a result, in 1993 an alpha version of the \emph{Second Extended File System} was released. This introduced a maximum partition size of 2 TiB, along with support for extended metadata and performance improvements. Although newer file systems have been designed, such as Ext3 and Ext4, the Second Extended Filesystem is still preferred on flash drives as it requires fewer write operations (since it has no journal). 
+As a result, in 1993 an alpha version of the \emph{Second Extended File System} was released. This introduced a maximum partition size of 2 TiB, along with support for extended metadata and performance improvements\cite{osdev:ext2,ext2-doc,ext2-impl}. Although newer file systems have been designed, such as Ext3 and Ext4, the Second Extended Filesystem is still preferred on flash drives as it requires fewer write operations (since it has no journal). 
 
 Later, Ext2 was extended a few more times, leading to Ext3 in 2001 and Ext4 in 2008. The structures of Ext3 and Ext4 are based on Ext2 and add some additional options such as journaling, journal checksums, extents, online defragmentation, delayed allocations and larger directories to name but a few\cite{ext2-doc}.
 
-Ext4 is currently the de-facto default filesystem for Linux systems, as it has been thoroughly battle-tested over the years, and offers good performance and reliability due to being a journaled filesystem. 
+Ext4 is currently the de-facto default filesystem for Linux systems, as it has been thoroughly battle-tested over the years, and offers good performance and reliability due to being a journaled filesystem. In this paper, we will take an in-depth look at all of the features offered by Ext4.
 
 \subsection{FAT family}
 
@@ -450,7 +461,10 @@ rdev:  0,0
 gen:   0
 flags: 00000000 ()
 \end{verbatim}
-From the output of this utility we learn that the inode number of this particular file is 18785118. This is meaningful only to the filesystem. The type of this file is reported as a regular file. 
+From the output of this utility we learn that the inode number of this particular file is 18785118. This is meaningful only to the filesystem. The type of this file is reported as a regular file. There exist a few special inode numbers, at least on \gls{ext} family filesystems\footnote{\gls{hfs+} is also confirmed to use inode number 2 for the root directory}: the root directory of a filesystem always has inode number 2. Inode number 0 is used internally, and inode 1 is a marker that a block is bad\cite{ext4-inodes}.
+
+% https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout#Special_inodes
+% https://unix.stackexchange.com/questions/198673/why-does-have-the-inode-2
 
 The permissions of this file are reported as 0644, this will be explored further in section \ref{sec:permissions} on page \pageref{sec:permissions}. Every entry also has an owner and a group associated with it. In this case, the file is owned by me, \gls{uid} 501.
 
@@ -466,34 +480,39 @@ The kernel reports four distinct times for this file. These are, in order of app
 
 \subsection{Directory}
 
-A directory contains other entries. It can be created with \verb|mkdir| command. An empty directory can be deleted with \verb|rmdir|. Contents of a directory can be listed with the \verb|ls| command.
+A directory contains other entries. The syscalls used to create delete directories are \verb|mkdir()| and \verb|rmdir()|\footnote{See \texttt{man 2 mkdir} and \texttt{man 2 rmdir} for more information on these.}. This project contains the \verb|mkdir| and \verb|rmdir| tools to use these syscalls to create and delete directories.
 
 \begin{verbatim}
-$ mkdir folder
+$ mkdir folder 644
 $ rmdir folder  
 \end{verbatim}
-If a directory is not empty, it cannot be deleted with \verb|rmdir|.
+The number 644 that is passed to the utility is the permissions of the directory, this will be discussed in the next section. 
+
+Note that a directory may only be deleted if it is empty. Calling \verb|rmdir| on a non-empty directory results in an error.
+
+% create touch/mkfile tool?
 
 \begin{verbatim}
-$ mkdir folder
+$ mkdir folder 644
 $ touch folder/file
 $ rmdir folder
 rmdir: failed to remove 'folder/': Directory not empty
 \end{verbatim}
-The \emph{stat} tool output of folders shows us that folders have the same metadata attached to them that regular files have.
+Historically in UNIX, it was possible to use the \verb|open()| and \verb|read()| syscalls to open directories and read the list of files directly from the raw filesystem, as they were stored in a simple-to-parse format. However, with modern filesystems, this does not make sense anymore and is thus not allowed anymore, at least on Linux and on macOS.
+
+% https://stackoverflow.com/questions/17618472/using-read-system-call-on-a-directory
+
+The syscalls used to read directory contents are \verb|opendir()|, \verb|readdir()|, \verb|rewinddir()|, \verb|seekdir()|, \verb|telldir()|, \verb|scandir()|, and on Linux the newer \verb|getdents|. There is a tool included to use these syscalls to list a directory's contents.
 
 \begin{verbatim}
-  File: folder
-  Size: 4096            Blocks: 8          IO Block: 4096   directory
-Device: fc01h/64513d    Inode: 5680241     Links: 2
-Access: (0775/drwxrwxr-x)  Uid: ( 1000/ patrick)   Gid: ( 1000/ patrick)
-Access: 2019-09-26 13:49:04.481613173 +0000
-Modify: 2019-09-26 13:49:09.853614507 +0000
-Change: 2019-09-26 13:49:09.853614507 +0000
- Birth: -  
+$ mkdir dir 755
+$ touch dir/file
+$ lsdir
+file
+.
+..
 \end{verbatim}
-
-The syscalls used to create, read and delete directories are \verb|mkdir()|, \verb|opendir()|, \verb|readdir()|, \verb|rewinddir()|, \verb|seekdir()|, \verb|telldir()|, \verb|scandir()|.
+The directory contents are returned in no particular order. Here you can also see the special files discussed earlier: the ‘\texttt{.}’ and ‘\texttt{..}’ relative paths, which are always returned when enumerating directory contents.
 
 \subsection{Regular File}
 
