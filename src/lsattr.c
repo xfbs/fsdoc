@@ -34,18 +34,28 @@ void print_attrs(int attr) {
 
     for(size_t i = 0; attr_types[i].attr; i++) {
         if(attr & attr_types[i].attr) {
+            /* only print commas after first attr */
             if(rest) {
                 printf(",");
             } else {
                 rest = true;
             }
 
+            /* print attr name */
             printf("%s", attr_types[i].name);
+
+            /* clear this flag so we keep track of unknown flags */
+            attr - attr_types[i].attr;
         }
     }
 
     if(rest) {
         printf("\n");
+    }
+
+    /* print unknown flags if any */
+    if(attr) {
+        printf("unknown: %08x\n", attr);
     }
 }
 
@@ -76,6 +86,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* display attrs in useful way */
     print_attrs(attr);
 
     return EXIT_SUCCESS;

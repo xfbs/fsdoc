@@ -829,13 +829,12 @@ Quotas allow the system to limit disk usage for certain individuals, groups or, 
 
 Attributes are flags that can be set on filesystem entries. These attributes have been added and developed over time and, as my research showed, not standardised across operating systems, although there does seem to be some semantic overlap.
 
-\subsection{Linux}
+\subsection{Linux Inode Flags}
 
-Linux sports a number of attributes. Unlike macOS, where attributes are stored in a bitset that is returned with the \verb|stat()| syscall, in Linux a special \verb|ioctl()| call has to be used to access and set them.
+Linux sports a number of attributes. Unlike macOS, where attributes are stored in a bitset that is returned with the \verb|stat()| syscall, in Linux a special \verb|ioctl()|\footnote{See \texttt{man ioctl\_iflags} and \texttt{man chattr} for more information on these.} call has to be used to access and set them. Table \ref{tbl:iflags} lists all the known flags and what they are used for.
 
 % man chattr
 % man ioctl_iflags
-
 
 \begin{table}
 \renewcommand{\arraystretch}{1.25}
@@ -880,7 +879,7 @@ Name & Description\\
 
 The xxx.
 
-\subsection{MacOS}
+\subsection{MacOS Flags}
 
 % help: what is https://ss64.com/osx/setfile.html setfile? 
 % what does it do and how does it work?
