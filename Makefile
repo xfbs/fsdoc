@@ -7,6 +7,10 @@ ifeq ($(shell uname -s),Darwin)
 	TOOLS += chflags lsflags
 endif
 
+ifeq ($(shell uname -s),Linux)
+	TOOLS += lsattr
+endif
+
 all: fsdoc.pdf
 
 tools: $(TOOLS:%=src/%)

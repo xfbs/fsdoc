@@ -836,6 +836,46 @@ Linux sports a number of attributes. Unlike macOS, where attributes are stored i
 % man chattr
 % man ioctl_iflags
 
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering\caption{Linux Inode Flags List}\label{tbl:iflags}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\verb|FS_APPEND_FL|
+& The file can only be opened in append mode.\\
+\verb|FS_COMPR_FL|
+& Store the file compressed on disk. Not supported by most filesystems apart from \emph{btrfs}.\\
+\verb|FS_DIRSYNC_FL|
+& Write directory changes synchronously to disk. Can be applied only to directories.\\
+\verb|FS_IMMUTABLE_FL|
+& The file is immutable, no changes are permitted to contents or metadata. Can only be set by superuser.\\
+\verb|FS_JOURNAL_DATA_FL|
+& Enable journaling of file data on \textsc{ext3} and \textsc{ext4} filesystems.\\
+\verb|FS_NOATIME_FL|
+& Don't  update  the  file  last access time when the file is accessed.\\
+\verb|FS_NOCOW_FL|
+& The file will not be subject to copy-on-write updates.\\
+\verb|FS_NODUMP_FL|
+& Don't include this file in backups made using dump(8).\\
+\verb|FS_NOTAIL_FL|
+& This flag is supported only on Reiserfs.  It disables the Reiserfs tail-packing feature, which tries to pack small files (and the final fragment of larger files)  into  the  same  disk block as the file metadata.\\
+\verb|FS_PROJINHERIT_FL|
+& Inherit the quota project ID.  Files and subdirectories will inherit the project ID of the directory.\\
+\verb|FS_SECRM_FL|
+& Mark the file for secure deletion.  This feature is not implemented by any filesystem, since the task of securely erasing a file from a recording medium is surprisingly difficult.\\
+\verb|FS_SYNC_FL|
+& Make  file updates synchronous.\\
+\verb|FS_TOPDIR_FL|
+& Mark a directory for special treatment under the Orlov block-allocation strategy.\\
+\verb|FS_UNRM_FL|
+& Allow the file to be undeleted if it is deleted.  This feature is not implemented by any filesystem, since it is possible to implement file-recovery mechanisms outside the kernel.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsubsection{Append-only file}
 
 The xxx.
