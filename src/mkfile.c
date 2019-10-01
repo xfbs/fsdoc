@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
+#include <fcntl.h>
 
 int main(int argc, char *argv[]) {
     int ret;
@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     /* make sure an argument was given */
     if(argc != 3) {
         fprintf(stderr, "Usage: %s <name> <mode>\n", progname);
-        fprintf(stderr, "Creates directory file with name <name> and mode specified "
+        fprintf(stderr, "Creates regular file with name <name> and mode specified "
                 "by <mode>.\n");
         return EXIT_FAILURE;
     }
@@ -21,12 +21,16 @@ int main(int argc, char *argv[]) {
     /* parse mode string */
     int mode = strtol(modestr, NULL, 8);
 
-    /* try to create dir */
-    if(0 != mkdir(filename, mode)) {
-        /* signal error */
+    /* try to call create file */
+    int fd = open(filename, O_CREAT | O_EXCL, mode);
+
+    /* check for error */
+    if(0 > fd) {
         perror(filename);
         exit(EXIT_FAILURE);
     }
+
+    close(fd);
 
     return EXIT_SUCCESS;
 }
