@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/errno.h>
 
 int main(int argc, char *argv[]) {
     int ret;
@@ -24,21 +25,21 @@ int main(int argc, char *argv[]) {
     }
 
     /* iterate through dir */
-    struct dirent entry;
-    struct dirent *result;
+    struct dirent *entry;
 
-    while(1) {
-        ret = readdir_r(dir, &entry, &result);
-        if(0 != ret) {
-            perror(dirname);
-            exit(EXIT_FAILURE);
-        }
+    /* reset errno to zero, because we don't know if readdir returns NULL
+     * because of an error or not, and we use it to check for that. */
+    errno = 0;
 
-        if(!result) {
-            break;
-        }
+    /* print all dir entry names. */
+    while((entry = readdir(dir)) != NULL) {
+        printf("%s\n", entry->d_name);
+    }
 
-        printf("%s\n", entry.d_name);
+    /* detect and output error. */
+    if(0 != errno) {
+        perror(dirname);
+        exit(EXIT_FAILURE);
     }
 
     /* clean up */
