@@ -11,7 +11,7 @@ typedef struct {
     const char *name;
 } attr_types_t;
 
-static const attr_types_t attr_types = {
+static const attr_types_t attr_types[] = {
     {FS_APPEND_FL, "append"},
     {FS_COMPR_FL, "compr"},
     {FS_DIRSYNC_FL, "dirsync"},
@@ -26,6 +26,18 @@ static const attr_types_t attr_types = {
     {FS_SYNC_FL, "sync"},
     {FS_TOPDIR_FL, "topdir"},
     {FS_UNRM_FL, "unrm"},
+    {FS_EXTENT_FL, "extent"},
+    {FS_DIRTY_FL, "dirty"},
+    {FS_COMPRBLK_FL, "comprblk"},
+    {FS_NOCOMP_FL, "nocomp"},
+    {FS_ENCRYPT_FL, "encrypt"},
+    {FS_BTREE_FL, "btree"},
+    {FS_INDEX_FL, "hashindex"},
+    {FS_IMAGIC_FL, "imagic"},
+    {FS_HUGE_FILE_FL, "hugefile"},
+    {FS_EA_INODE_FL, "eainode"},
+    {FS_EOFBLOCKS_FL, "eofblocks"},
+    {FS_INLINE_DATA_FL, "inlinedata"},
     {0, NULL},
 };
 
@@ -45,7 +57,7 @@ void print_attrs(int attr) {
             printf("%s", attr_types[i].name);
 
             /* clear this flag so we keep track of unknown flags */
-            attr - attr_types[i].attr;
+            attr &= ~attr_types[i].attr;
         }
     }
 

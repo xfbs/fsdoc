@@ -831,7 +831,7 @@ Attributes are flags that can be set on filesystem entries. These attributes hav
 
 \subsection{Linux Inode Flags}
 
-Linux sports a number of attributes. Unlike macOS, where attributes are stored in a bitset that is returned with the \verb|stat()| syscall, in Linux a special \verb|ioctl()|\footnote{See \texttt{man ioctl\_iflags} and \texttt{man chattr} for more information on these.} call has to be used to access and set them. Table \ref{tbl:iflags} lists all the known flags and what they are used for.
+Linux sports a number of attributes. Unlike macOS, where attributes are stored in a bitset that is returned with the \verb|stat()| syscall, in Linux a special \verb|ioctl()|\footnote{See \texttt{man ioctl\_iflags} and \texttt{man chattr} for more information on these. A full list of flags is available at \texttt{/usr/include/linux/fs.h}.} call has to be used to access and set them. Table \ref{tbl:iflags} lists all the known flags and what they are used for.
 
 % man chattr
 % man ioctl_iflags
@@ -843,37 +843,72 @@ Linux sports a number of attributes. Unlike macOS, where attributes are stored i
 \toprule
 Name & Description\\
 \midrule
-\verb|FS_APPEND_FL|
-& The file can only be opened in append mode.\\
-\verb|FS_COMPR_FL|
-& Store the file compressed on disk. Not supported by most filesystems apart from \emph{btrfs}.\\
-\verb|FS_DIRSYNC_FL|
-& Write directory changes synchronously to disk. Can be applied only to directories.\\
-\verb|FS_IMMUTABLE_FL|
-& The file is immutable, no changes are permitted to contents or metadata. Can only be set by superuser.\\
-\verb|FS_JOURNAL_DATA_FL|
-& Enable journaling of file data on \textsc{ext3} and \textsc{ext4} filesystems.\\
-\verb|FS_NOATIME_FL|
-& Don't  update  the  file  last access time when the file is accessed.\\
-\verb|FS_NOCOW_FL|
-& The file will not be subject to copy-on-write updates.\\
-\verb|FS_NODUMP_FL|
-& Don't include this file in backups made using dump(8).\\
-\verb|FS_NOTAIL_FL|
-& This flag is supported only on Reiserfs.  It disables the Reiserfs tail-packing feature, which tries to pack small files (and the final fragment of larger files)  into  the  same  disk block as the file metadata.\\
-\verb|FS_PROJINHERIT_FL|
-& Inherit the quota project ID.  Files and subdirectories will inherit the project ID of the directory.\\
 \verb|FS_SECRM_FL|
 & Mark the file for secure deletion.  This feature is not implemented by any filesystem, since the task of securely erasing a file from a recording medium is surprisingly difficult.\\
-\verb|FS_SYNC_FL|
-& Make  file updates synchronous.\\
-\verb|FS_TOPDIR_FL|
-& Mark a directory for special treatment under the Orlov block-allocation strategy.\\
+
 \verb|FS_UNRM_FL|
 & Allow the file to be undeleted if it is deleted.  This feature is not implemented by any filesystem, since it is possible to implement file-recovery mechanisms outside the kernel.\\
+
+\verb|FS_COMPR_FL|
+& Store the file compressed on disk. Not supported by most filesystems apart from \emph{btrfs}.\\
+
+\verb|FS_SYNC_FL|
+& Make  file updates synchronous.\\
+
+\verb|FS_IMMUTABLE_FL|
+& The file is immutable, no changes are permitted to contents or metadata. Can only be set by superuser.\\
+
+\verb|FS_APPEND_FL|
+& The file can only be opened in append mode.\\
+
+\verb|FS_NODUMP_FL|
+& Don't include this file in backups made using \emph{dump}.\\
+
+\verb|FS_NOATIME_FL|
+& Don't  update  the  file  last access time when the file is accessed.\\
+
+\verb|FS_ENCRYPT_FL|
+& Encrypted file.\\
+
+\verb|FS_BTREE_FL|
+& B-tree format dir.\\
+
+\verb|FS_INDEX_FL|
+& Hash-indexed directory.\\
+
+\verb|FS_IMAGIC_FL|
+& AFS directory.\\
+
+\verb|FS_EXTENT_FL|
+& This file uses extents.\\
+
+\verb|FS_DIRSYNC_FL|
+& Write directory changes synchronously to disk. Can be applied only to directories.\\
+
+\verb|FS_JOURNAL_DATA_FL|
+& Enable journaling of file data on \textsc{ext3} and \textsc{ext4} filesystems.\\
+
+\verb|FS_NOCOW_FL|
+& The file will not be subject to copy-on-write updates.\\
+
+\verb|FS_NOTAIL_FL|
+& This flag is supported only on Reiserfs.  It disables the Reiserfs tail-packing feature, which tries to pack small files (and the final fragment of larger files)  into  the  same  disk block as the file metadata.\\
+
+\verb|FS_PROJINHERIT_FL|
+& Inherit the quota project ID.  Files and subdirectories will inherit the project ID of the directory.\\
+
+\verb|FS_TOPDIR_FL|
+& Mark a directory for special treatment under the Orlov block-allocation strategy.\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The \verb|lsattr| utility included allows querying the Kernel for attributes of filesystem entries. It decodes the flags into human-readable names.
+
+\begin{verbatim}
+$ lsattr file
+extent
+\end{verbatim}
 
 \subsubsection{Append-only file}
 
