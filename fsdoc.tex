@@ -67,6 +67,7 @@
 \newabbreviation{tcp}{tcp}{Transmission Control Protocol}
 \newabbreviation{udp}{udp}{User Datagram Protocol}
 \newabbreviation{dns}{dns}{Domain Name Service}
+\newabbreviation{pid}{pid}{Process ID}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -1170,8 +1171,7 @@ Note that special files missing in the device filesystem might still be availabl
 \begin{verbatim}
 $ sudo mknod -m 640 /dev/kmem c 1 2
 \end{verbatim}
-
-One interesting bit of information is that the \verb|/dev| filesystem is so ubiquitous that some applications even have some special handling for it. For example, the \emph{bash} shell, which comes as default on most Linux systems, offers special handling for paths beginning with \verb|/dev/net/tcp| and \verb|/dev/net/udp|, allowing sending of \gls{tcp} and \gls{udp} packets by writing to pseudo-files (these files don't really exist, rather writes to them are intercepted by bash and translated into socket operations).
+One interesting bit of information is that the \verb|/dev| filesystem is so ubiquitous that some applications even have some special handling for it. For example, the \emph{bash} shell, which comes as default on most Linux systems, offers special handling for paths beginning with \verb|/dev/net/tcp| and \verb|/dev/net/udp|, allowing sending of \gls{tcp} and \gls{udp} packets by writing to pseudo-files\cite{bash-redir-net} (these files don't really exist, rather writes to them are intercepted by bash and translated into socket operations).
 
 This is an example of doing a \gls{http} request with bash redirections.
 
@@ -1196,20 +1196,229 @@ head -c 44 <&3 | tail -c 4 | hexdump -n 4 -e '/1 "%u" "."'
 \end{verbatim}
 This illustrates how powerful the everything-is-a-file metaphor is: so powerful in fact that the bash developers have decided to add virtual files that can be used to perform actions typically performed by more complicated syscalls.
 
-% add note about bash virtual dev filesystem handling.
-% http://git.savannah.gnu.org/cgit/bash.git/tree/redir.c#n535
+% http://git.savannah.gnu.org/cgit/bash.git/tree/redir.c#n535 [cited]
 
-\subsection{Proc}
-
-% TODO: overview, examples.
-
-\subsection{Sys}
+\subsection{Process}
 
 % TODO: overview, examples.
 
-\section{\glsdesc*{fuse}}
+% https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html
 
-\gls{fuse} is a facility by which filesystems can be implemented in userspace, meaning that requests are proxied from the kernel into a userspace process. Unlike regular filesystems, which are implemented and run in the kernel. This has some advantages, namely that a user does not need superuser privileges to mount a userspace filesystem, and it also means that an experimental filesystem can be quickly hacked up and played around with without running the change of causing the kernel to crash, as a misbehaving regular filesystem might do. 
+% https://www.kernel.org/doc/html/latest/admin-guide/sysctl/index.html
+
+Linux has something that other \textsc{unix}es don't have: the process filesystem, also known as \emph{procfs}. This is a virtual filesystem (meaning that the files in it are not found on a disk somewhere, but are only presented by the kernel), and can be found at the path \verb|/proc|. It's primary purpose is to let the kernel expose information about processes in a structured manner, similar to the device filesystem, which lets the kernel expose devices in a structured manner.
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{List of Significant Files Exposed in the Process Filesystem}  
+\label{tbl:procfs}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Path & Description\\
+\midrule
+\texttt{/proc/apm} &
+Advanced power management info.\\
+
+\texttt{/proc/bus/} &
+Directory containing bus specific information.\\
+
+\texttt{/proc/cmdline} &
+Kernel command line. \\
+
+\texttt{/proc/cpuinfo} &Information about the processor, such as its type, make, model, and performance.\\
+
+\texttt{/proc/devices} &
+List of device drivers configured into the currently running kernel (block and character).\\
+
+\texttt{/proc/dma} &
+Shows which DMA channels are being used at the moment.\\
+
+\texttt{/proc/driver/} &
+Various drivers grouped here, currently rtc.\\
+
+\texttt{/proc/execdomains} &
+Execdomains, related to security.\\
+
+\texttt{/proc/fb} &
+Frame Buffer devices.\\
+
+\texttt{/proc/filesystems} &
+Filesystems configured/supported into/by the kernel.\\
+
+\texttt{/proc/fs/} &
+File system parameters, currently nfs/exports.\\
+
+\texttt{/proc/ide/} &
+This subdirectory contains information about all IDE devices of which the kernel is aware.\\
+
+\texttt{/proc/interrupts} &
+Shows which interrupts are in use, and how many of each there have been.\\
+
+\texttt{/proc/iomem} &
+Memory map.\\
+
+\texttt{/proc/ioports} &
+Which I/O ports are in use at the moment.\\
+
+\texttt{/proc/irq} &
+Masks for irq to cpu affinity.\\
+
+\texttt{/proc/isapnp} &
+ISA PnP (Plug and Play) Info.\\
+
+\texttt{/proc/kcore} &
+An image of the physical memory of the system (can be ELF or A.OUT (deprecated in 2.4)). This is exactly the same size as your physical memory, but does not really take up that much memory; it is generated on the fly as programs access it. (Remember: unless you copy it elsewhere, nothing under /proc takes up any disk space at all.)\\
+
+\texttt{/proc/kmsg} &
+Messages output by the kernel. These are also routed to syslog.\\
+
+\texttt{/proc/ksyms} &
+Kernel symbol table.\\
+
+\texttt{/proc/loadavg} &
+The 'load average' of the system; three indicators of how much work the system has done during the last 1, 5 \& 15 minutes.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{List of Significant Files Exposed in the Process Filesystem}  
+\label{tbl:procfs2}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Path & Description\\
+\midrule
+\texttt{/proc/locks} &
+Kernel locks.\\
+
+\texttt{/proc/meminfo} &
+Information about memory usage, both physical and swap. Concatenating this file produces similar results to using 'free' or the first few lines of 'top'.\\
+
+\texttt{/proc/misc} &
+Miscellaneous pieces of information. This is for information that has no real place within the rest of the proc filesystem.\\
+
+\texttt{/proc/modules} &
+Kernel modules currently loaded. Typically its output is the same as that given by the 'lsmod' command.\\
+
+\texttt{/proc/mounts} &
+Mounted filesystems\\
+
+\texttt{/proc/mtrr} &
+Information regarding mtrrs\\
+
+\texttt{/proc/net} &
+Status information about network protocols.\\
+
+\texttt{/proc/parport} &
+Contains information about the parallel ports of your system.\\
+
+\texttt{/proc/partitions} &
+Table of partitions known to the system\\
+
+\texttt{/proc/rtc} &
+Real time clock\\
+
+\texttt{/proc/scsi} &
+Information about SCSI host adapters in the system.\\
+
+\texttt{/proc/self} &
+A symbolic link to the process directory of the program that reading it.\\
+
+\texttt{/proc/slabinfo} &The slabinfo file gives information about memory usage at the slab level. Linux uses slab pools for memory management above page level in version 2.2. Commonly used objects have their own slab pool (such as network buffers, directory cache, and so on).\\
+
+\texttt{/proc/stat} &
+Overall/various statistics about the system, such as the number of page faults since the system was booted.\\
+
+\texttt{/proc/swaps} &
+Swap space utilization.\\
+
+\texttt{/proc/sys} &
+This is not only a source of information, it also allows you to change parameters within the kernel without the need for recompilation or even a system reboot.\\
+
+\texttt{/proc/tty} &
+Information about the available and actually used tty's can be found in this directory. You'll find entries for drivers and line disciplines here.\\
+
+\texttt{/proc/uptime} &
+The time the system has been up.\\
+
+\texttt{/proc/version} &The kernel version.\\
+
+\texttt{/proc/video} &
+BTTV info of video resources.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{List of Information on Processes exposed by the Proc Filesystem.}  
+\label{tbl:procfs3}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Path & Description\\
+\midrule
+\texttt{/proc/<pid>/cmdline} &
+Command line arguments.\\
+
+\texttt{/proc/<pid>/cpu} &
+Current and last cpu in which it was executed.\\
+
+\texttt{/proc/<pid>/cwd} &
+Link to the current working directory.\\
+
+\texttt{/proc/<pid>/environ} &
+Values of environment variables.\\
+
+\texttt{/proc/<pid>/exe} &
+Link to the executable of this process.\\
+
+\texttt{/proc/<pid>/fd} &
+Directory, which contains all file descriptors.\\
+
+\texttt{/proc/<pid>/maps} &
+Memory maps to executables and library files.\\
+
+\texttt{/proc/<pid>/mem} &
+Memory held by this process.\\
+
+\texttt{/proc/<pid>/root} &
+Link to the root directory of this process.\\
+
+\texttt{/proc/<pid>/stat} &
+Process status.\\
+
+\texttt{/proc/<pid>/statm} &
+Process memory status information.\\
+
+\texttt{/proc/\emph{pid}/status} &
+Process status in human readable form.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Unlike the device filesystem, which contains special files that could exist on any filesystem, which have a major and a minor number to tell the kernel what device or what subsystem to communicate with, the process filesystem consists entirely of what seem to be regular files. 
+
+The process filesystem contains a folder for every process running on the system — named after the \gls{pid} of the process, as well as some other files exposing general information from the kernel\footnote{See \texttt{man proc} for more detailed information about what information is exposed by the kernel.}. Tables \ref{tbl:procfs}, \ref{tbl:procfs2} and \ref{tbl:procfs3} list some of the files exposed in the process filesystem.
+
+Some of the interesting features of the process filesystem include being able to read from a process's memory, by looking at \verb|/proc/<pid>/mem|. This obviously requires superuser privileges to do.
+
+% TODO: write demo for reading mem of another process.
+
+\subsection{System}
+
+Similar to the process filesystem, the system filesystem, typically mounted at \verb|/sys|, is a virtual filesystem that lets the kernel both expose information about the system, and it allows for configuration of the system. The contents of this file system are out of scope for this article.
+
+% TODO: overview, examples.
+
+\section{Filesystem In Userspace (FUSE)}
+
+\gls{fuse} is a facility by which filesystems can be implemented in userspace, meaning that requests are proxied from the kernel into a userspace process. \gls{fuse} exists as a two-part solution: one being a kernel module implementing the kernel-side of things, and the other one being a userspace library, \emph{libfuse}, which one can use to implement the filessytem operations. The library and the kernel module communicate via the \verb|/dev/fuse| special file.
+
+Unlike regular filesystems, which are implemented and run in the kernel, this has some advantages, namely that a user does not need superuser privileges to mount a userspace filesystem. This means that an experimental filesystem can be quickly hacked up and played around with without running the change of causing the kernel to crash, as a misbehaving regular filesystem might do. 
 
 On the other hand, \gls{fuse} filesystems also have a number of restrictions. Features like the \emph{setuid} bit or the capabilities that extended attributes allow setting on executables mean that if an unprivileged user can fully control a filesystem, a system can be easily compromised. For this reason, \gls{fuse} filesystems are more limited.
 
