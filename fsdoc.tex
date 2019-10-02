@@ -62,6 +62,11 @@
 \newabbreviation{lsb}{lsb}{Linux Standard Base}
 \newabbreviation{fhs}{fhs}{Filesystem Hiearchy Standard}
 \newabbreviation{lfn}{lfn}{Long File Names}
+\newabbreviation{usb}{usb}{Universal Serial Bus}
+\newabbreviation{http}{http}{Hypertext Transfer Protocol}
+\newabbreviation{tcp}{tcp}{Transmission Control Protocol}
+\newabbreviation{udp}{udp}{User Datagram Protocol}
+\newabbreviation{dns}{dns}{Domain Name Service}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -713,6 +718,9 @@ Character special files are entries that are handled completely by the kernel. T
 
 When reading or writing from them, the action that happens depends on their minor and major numbers in the kernel.
 
+% list of minor and major device numbers
+% https://www.kernel.org/doc/Documentation/admin-guide/devices.txt
+
 \subsection{Block Device}
 
 A block device is very similar to a character special device, in terms of how it is used and the fact that it, too, is a kind of virtual file. Block devices are also handled completely by the kernel, and are typically used as an interface to hardware. For example, \verb|/dev/sda| is a block device, and is used for communicating to the raw storage of the first hard drive attached to the system. 
@@ -1109,9 +1117,87 @@ File locking is supported with the \verb|flock()| syscall.
 
 % TODO: example, writeup.
 
-\section{Virtual Filesystems}
+\section{Special Filesystems}
 
 % TODO: introduction, comparison to /dev, justification, some history.
+
+\subsection{Device}
+
+% https://www.tldp.org/LDP/Linux-Filesystem-Hierarchy/html/dev.html
+
+The device filesystem, found at \verb|/dev|, was historically not a separate filesystem but just an ordinary folder, in which special device files for the hardware could be created (with \verb|mknod|, for example). According to the \textsc{unix} \emph{everything is a file} philosophy, most of the hardware features could be accessed using the files found in the \verb|/dev| folder.
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering\caption{List of Character and Block Files In Dev Filesystem}\label{tbl:devfs}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\texttt{/dev/null} & Empty file. Writing to it disregards data, reading from it produces no data.\\
+\texttt{/dev/zero} & File full of zeroes. Writing to it disregards data, reading from it produces infinite zeroed data.\\
+\texttt{/dev/full} & Full file. Writing to it produces the error \verb|ENOSPC|, meaning \emph{no space left on device}.\\
+\texttt{/dev/sda} & First \textsc{scsi} device (hard disk, memory sticks, external mass storage devices).\\
+\texttt{/dev/sda1} & First partition on first \textsc{scsi} device.\\
+\texttt{/dev/random} & Read random data from kernel (blocking).\\
+\texttt{/dev/urandom} & Read random data from kernel (nonblocking, preferred).\\
+\texttt{/dev/shm/} & Folder containing shared memory objects created with \verb|shm_open()|.\\
+\texttt{/dev/tty0} & Current virtual console.\\
+\texttt{/dev/tty} & Alias to the console (physical, virtual or pseudo device, if any) associated to the process that opens it.\\
+\texttt{/dev/ttyS0} & First serial console.\\
+\texttt{/dev/lp0} & First parallel port (printer, scanner).\\
+\texttt{/dev/usb/} & Folder containing \gls{usb} devices.\\
+\texttt{/dev/disk/} & Folder of disks by various attributes (\emph{label, uuid, path}).\\
+\texttt{/dev/mem} & Raw access to system physical memory.\\
+\texttt{/dev/loop0} & The first loopback device. Loopback devices are used for mounting filesystems which are not located on other block devices such as disks.\\
+\texttt{/dev/stdin} & Standard input of current process. Reading from this file reads from standard input.\\
+\texttt{/dev/stdout} & Standard output of current process. Writing to this file writes to standard output.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% http://www.kroah.com/linux/talks/ols_2003_udev_paper/Reprint-Kroah-Hartman-OLS2003.pdf
+
+For practical reasons, the \verb|/dev| filesystem is actually a virtual filesystem on modern Linux machines, created by the \emph{udev} driver. This \emph{udev}\footnote{See \texttt{man udev} for more information on this feature.} is a deamon that monitors the hardware, creating device files in \verb|/dev| when hardware is added or removed, and also allows for sending events to other deamons to notify them of this.
+
+% https://www.tldp.org/LDP/sag/html/dev-fs.html
+% https://unix.stackexchange.com/questions/60641/linux-difference-between-dev-console-dev-tty-and-dev-tty0/384792
+
+On macOS, \verb|/dev| is provided by the \emph{devfs} driver, in a similar manner to Linux's \emph{udev}. The set of files provided by these two drivers is not the same, and there are differences between the kinds of special device files offered on different kernels. Table \ref{tbl:devfs} lists some common files found in the device filesystem, and what they are used for\footnote{\url{https://www.kernel.org/doc/Documentation/admin-guide/devices.txt} lists all major/minor numbers the Linux kernel supports for device files.}.
+
+Note that special files missing in the device filesystem might still be available on a system after creating them manually. For example, the \verb|/dev/kmem| file, which is used to access the (virtual) memory of the kernel, might not exist on a typical system, but can be created easily like this.
+
+\begin{verbatim}
+$ sudo mknod -m 640 /dev/kmem c 1 2
+\end{verbatim}
+
+One interesting bit of information is that the \verb|/dev| filesystem is so ubiquitous that some applications even have some special handling for it. For example, the \emph{bash} shell, which comes as default on most Linux systems, offers special handling for paths beginning with \verb|/dev/net/tcp| and \verb|/dev/net/udp|, allowing sending of \gls{tcp} and \gls{udp} packets by writing to pseudo-files (these files don't really exist, rather writes to them are intercepted by bash and translated into socket operations).
+
+This is an example of doing a \gls{http} request with bash redirections.
+
+\begin{verbatim}
+# open tcp connection at fd 3
+exec 3<>/dev/tcp/wttr.in/80
+# send http request, masquerading as curl
+printf "GET / HTTP/1.0\r\n" >&3
+printf "User-Agent: curl/7.58.0\r\n" >&3
+printf "Host: wttr.in\r\n\r\n" >&3
+# print response
+cat <&3
+\end{verbatim}
+With the same mechanism, a \gls{dns} request can be performed over \gls{udp} with a pure bash script.
+
+\begin{verbatim}
+exec 3<>/dev/udp/9.9.9.9/53
+packet="\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+packet="$packet\x06github\x03com\x00\x00\x01\x00\x01"
+printf $packet >&3
+head -c 44 <&3 | tail -c 4 | hexdump -n 4 -e '/1 "%u" "."'
+\end{verbatim}
+This illustrates how powerful the everything-is-a-file metaphor is: so powerful in fact that the bash developers have decided to add virtual files that can be used to perform actions typically performed by more complicated syscalls.
+
+% add note about bash virtual dev filesystem handling.
+% http://git.savannah.gnu.org/cgit/bash.git/tree/redir.c#n535
 
 \subsection{Proc}
 
