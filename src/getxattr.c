@@ -3,6 +3,10 @@
 #include <sys/xattr.h>
 #include <string.h>
 
+#ifdef __linux__
+#define getxattr(path, name, buf, size, out, flag) getxattr(path, name, buf, size)
+#endif
+
 int main(int argc, char *argv[]) {
     const char *progname = argv[0];
 
