@@ -1352,9 +1352,20 @@ One pattern that is easy to employ for programs running as superuser is to perfo
 
 However, an even better approach is possible in Linux. Starting  with  kernel  2.2, Linux divides the privileges traditionally associated with superuser into distinct units, known as \emph{capabilities}, which can be independently enabled and disabled\footnote{See \texttt{man capabilities} for more information on these.}. This allows a process to only have exactly those rights which it needs — and not more, reducing potential security risks. Tables \ref{tbl:linuxcaps} and \ref{tbl:linuxcaps2} list all capabilities known to the kernel as of now.
 
-The way this relates to filesystems is that starting with Linux version 2.6.24, it supports \emph{file capabilities}. This is similar to the setuid mechanism, however, instead of a single bit, one can specify exactly which capabilities an executable should have upon launch, rather than just which effective \gls{uid} it should take on. This information is stored in the extended attribute \emph{security.capability}.
+The way this relates to filesystems is that starting with Linux version 2.6.24, it supports \emph{file capabilities}. This is similar to the setuid mechanism, however, instead of a single bit, one can specify exactly which capabilities an executable should have upon launch, rather than just which effective \gls{uid} it should take on. 
 
+The kernel offers two functions, \verb|cap_set_file()| and \verb|cap_get_file()| for querying and updating file capabilities. Interally, this is stored in the extended attribute \emph{security.capability} as a bitmask. This project comes with the tools \verb|setcap| and \verb|getcap| which can be used to get and set the capabilities of a file, and the tool \verb|proccap| which queries it's own process capabilities and dumps them out.
 
+% TODO example of root capabilities, better example
+
+\begin{verbatim}
+$ proccap
+=
+$ sudo setcap "cap_net_admin+pe" proccap
+$ getcap proccap
+= cap_net_admin+pe
+\end{verbatim}
+With this scheme, a \verb|ping| utility can be constructed that does not need to use the setuid bit, and similarly, services using privileged ports can be changed not to need to be run as superuser.
 
 \subsection{Linux Access Control Lists}
 
