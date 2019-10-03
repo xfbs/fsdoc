@@ -68,6 +68,7 @@
 \newabbreviation{udp}{udp}{User Datagram Protocol}
 \newabbreviation{dns}{dns}{Domain Name Service}
 \newabbreviation{pid}{pid}{Process ID}
+\newabbreviation{url}{url}{Universal Resource Locator}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -219,6 +220,10 @@ The \gls{ntfs} is the filesystem currently used by Windows. It supports a lot of
 % todo explain a bit of history and features
 
 The \gls{hfs+} is a filesystem currently used by Apple on their whole product range. It was introduced in 1998 to replace \textsc{hfs}, the predecessor that was used up until Mac OS 8.0. It supports all of the features expected from a modern filesystem, and also supports some interesting leftovers, such as \emph{resource forks}.
+
+% documentation on format is partially in https://opensource.apple.com/source/xnu/xnu-1699.22.73/bsd/hfs/hfs_format.h
+
+% https://filexray.com/home/
 
 \subsection{Apple File System (APFS)}
 
@@ -950,7 +955,7 @@ Name & Constant & Value (hex) & Description\\
 \emph{opaque} & \verb|UF_OPAQUE| & 00\,00\;00\,08 & Opaque in union mount.\\
 — & \verb|UF_COMPRESSED| & 00\,00\;00\,20 & Compressed.\\
 — & \verb|UF_TRACKED| & 00\,00\;00\,40 & Tracked.\\
-— & \verb|UF_DATAVAULT| & 00\,00\;00\,80 & Datavault.\\
+\emph{datavault} & \verb|UF_DATAVAULT| & 00\,00\;00\,80 & Entitlement required for reading.\\
 \emph{hidden} & \verb|UF_HIDDEN| & 00\,00\;80\,00 & Hidden from \glsname{gui}.\\
 \midrule
 \emph{arch} & \verb|SF_ARCHIVED| & 00\,01\;00\,00 & Archived.\\
@@ -1055,7 +1060,27 @@ The archived flag is not handled by the kernel itself. It can be set to mark tha
 
 \subsubsection{Compressed}
 
-\subsubsection{Datavault}
+\subsubsection{Data Vault}
+
+% https://mjtsai.com/blog/2018/10/25/mojave-fixes-quicklook-cache-vulnerability-with-a-datavault/
+% https://unix.stackexchange.com/questions/472576/macos-mojave-directory-permissions
+% https://eclecticlight.co/2018/10/25/no-entry-⛔%EF%B8%8F-access-controls-in-mojave/
+
+Along with the \gls{sip} system, Apple has implemented the \emph{datavault} flag, which is can be set on files or folders and prevents them from being accessed (\verb|read()| or even \verb|stat()|) unless the process has \emph{entitlements}. Only system applications have these entitlements, effectively preventing anything on the system that is not audited by Apple from accessing this data.
+
+One example of a file on which this flag is set is the QuickLook thumbnail cache\footnote{Starting with macOS 10.14.}, to prevent utilities from reading from this cache. This file is located at \texttt{/private/var/folders/\emph{xx}/\emph{yy}/C/com.apple.QuickLook.thumbnailcache}, where \emph{xx} is a two-character and \emph{yy} a 30-character random-looking token.
+
+\begin{verbatim}
+$ stat /path/to/com.apple.QuickLook.thumbnailcache
+/path/to/com.apple.QuickLook.thumbnailcache: Operation not
+permitted
+\end{verbatim}
+It is possible to list the entitlements of an executable with the \verb|codesign| utility, like such.
+
+\begin{verbatim}
+$ codesign -d --entitlements :- /Applications/Mail.app/
+\end{verbatim}
+These restrictions can be circumvented by turning off \gls{sip}, which can be done by booting into safe mode and using an Apple-provided command line utility, \verb|csrutil|, to disable it. Note that this potentially weakens the security of the system.
 
 \subsubsection{Undocumented}
 
@@ -1071,7 +1096,73 @@ Usually, extended attributes work like a key-value store, using arbitrary string
 
 % https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/limits.h
 
-\gls{posix} Extended Attributes are divided into different namespaces, with different restrictions on who and what can be set. The \emph{user} namespace has no restrictions on what attributes can be set. 
+\gls{posix} Extended Attributes are divided into different namespaces, with different restrictions on who and what can be set. The \emph{user} namespace has no restrictions on what attributes can be set.
+
+\subsection{MacOS Extended Attributes}
+
+% SetFile -type 'GSPb' -creator 'GSP+' 
+% GetFileInfo -t
+% GetFileInfo -c
+% what do these do?
+
+MacOS offers extended attributes that can be accessed and modified with the \verb|listxattr()|, \verb|getxattr()| and \verb|setxattr()| syscall. They are used by the system in various places, for example HFS+ Resource Forks are kept in an extended attribute named \emph{com.apple.ResourceFork}.
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{Known Extended Attributes in MacOS}
+\label{tbl:macosxattr}
+\begin{tabular}{@{}p{2cm}p{7cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\texttt{com.apple.FinderInfo}\\
+& Information used by Apple's Finder, binary. The first four bytes of this are the file type, followed by the file creator. These attributes can be viewed with \verb|GetFileInfo| and set with \verb|SetFile|, and are remnants of MacOS Classic.\\
+\texttt{com.apple.ResourceFork} & The resource fork of the file is stored internally as an extended attribute. This contains the raw data of the resource fork, which can also be accessed with \texttt{file/..namedfork/rsrc}.\\
+\texttt{com.apple.lastuseddate\#PS} & Binary information representing the last time it was used. Used by iCloud to offload files that are seldomly used and backed up in iCloud.\\
+\texttt{com.apple.quarantine} & Marker used for filed that have been downloaded by Safari.\\
+\texttt{com.apple.metadata:\emph{name}} & Names used by Apple to store metadata. These usually contain data in binary propery list format (see \texttt{man plist} for more information).\\
+\texttt{com.apple.iwork.documentUUID\#PS} & \\
+\texttt{com.apple.icloud.desktop} & \\
+\texttt{com.apple.progress.fractionCompleted} & Contains information about how much a task has been completed.\\
+\texttt{com.apple.rootless} & Marks items which are protected by \gls{sip}.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% https://eclecticlight.co/2017/08/14/show-me-your-metadata-extended-attributes-in-macos-sierra/
+
+% https://eclecticlight.co/2019/08/19/how-to-tag-documents-with-metadata-that-works-in-search/
+
+% https://eclecticlight.co/xattred-sandstrip-xattr-tools/
+
+\begin{table}
+\centering
+\caption{Known Metadata Attributes in MacOS}
+\label{tbl:macosmetaattr}
+\begin{tabular}{@{}lp{7cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\texttt{kMDItemWhereFroms} & Contains the \gls{url} from where a file was downloaded.\\
+\texttt{kMDItemIsScreenCapture} & \\
+\texttt{kMDItemScreenCaptureGlobalRect} & \\
+\texttt{kMDItemScreenCaptureType} & \\
+\texttt{\_kMDItemUserTags} & \\
+\texttt{kMDItemDownloadedDate} & \\
+\texttt{kMDLabel\_\emph{string}} & \\
+\texttt{\_kTimeMachineNewestSnapshot} & Contains the oldest Time Machine backup timestamp for a major folder such as your Home folder.\\
+\texttt{\_kTimeMachineNewestSnapshot} & Contains the newest Time Machine backup timestamp for a major folder.\\
+\texttt{kMDItemHeadline} & Document headline\\
+\texttt{kMDItemDescription} & Description of the document\\
+\texttt{kMDItemCreator} & Name of the document creator, usually its author\\
+\texttt{kMDItemCopyright} & Copyright notice\\
+\texttt{kMDItemKeywords} &  List of keywords\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table \ref{tbl:macosflags} lists some of the known extended attributes used by Apple on MacOS. For the metadata attributes, Table \ref{tbl:macosmetaattr} lists some known names. Apart from \emph{com.apple.FinderInfo}, none of these at
 
 \subsection{Capabilities}
 
@@ -1361,37 +1452,37 @@ BTTV info of video resources.\\
 \toprule
 Path & Description\\
 \midrule
-\texttt{/proc/<pid>/cmdline} &
+\texttt{/proc/\emph{pid}/cmdline} &
 Command line arguments.\\
 
-\texttt{/proc/<pid>/cpu} &
+\texttt{/proc/\emph{pid}/cpu} &
 Current and last cpu in which it was executed.\\
 
-\texttt{/proc/<pid>/cwd} &
+\texttt{/proc/\emph{pid}/cwd} &
 Link to the current working directory.\\
 
-\texttt{/proc/<pid>/environ} &
+\texttt{/proc/\emph{pid}/environ} &
 Values of environment variables.\\
 
-\texttt{/proc/<pid>/exe} &
+\texttt{/proc/\emph{pid}/exe} &
 Link to the executable of this process.\\
 
-\texttt{/proc/<pid>/fd} &
+\texttt{/proc/\emph{pid}/fd} &
 Directory, which contains all file descriptors.\\
 
-\texttt{/proc/<pid>/maps} &
+\texttt{/proc/\emph{pid}/maps} &
 Memory maps to executables and library files.\\
 
-\texttt{/proc/<pid>/mem} &
+\texttt{/proc/\emph{pid}/mem} &
 Memory held by this process.\\
 
-\texttt{/proc/<pid>/root} &
+\texttt{/proc/\emph{pid}/root} &
 Link to the root directory of this process.\\
 
-\texttt{/proc/<pid>/stat} &
+\texttt{/proc/\emph{pid}/stat} &
 Process status.\\
 
-\texttt{/proc/<pid>/statm} &
+\texttt{/proc/\emph{pid}/statm} &
 Process memory status information.\\
 
 \texttt{/proc/\emph{pid}/status} &
