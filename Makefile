@@ -8,7 +8,8 @@ ifeq ($(shell uname -s),Darwin)
 endif
 
 ifeq ($(shell uname -s),Linux)
-	TOOLS += lsattr
+	TOOLS += lsattr lscap proccap
+	LDFLAGS += -lcap
 endif
 
 all: fsdoc.pdf
@@ -23,7 +24,7 @@ fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
 
 src/%: src/%.c
-	$(CC) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 clean:
 	$(RM) fsdoc.pdf
