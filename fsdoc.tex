@@ -69,6 +69,7 @@
 \newabbreviation{dns}{dns}{Domain Name Service}
 \newabbreviation{pid}{pid}{Process ID}
 \newabbreviation{url}{url}{Universal Resource Locator}
+\newabbreviation{uuid}{uuid}{Universally Unique Identifier}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -1112,20 +1113,28 @@ MacOS offers extended attributes that can be accessed and modified with the \ver
 \centering
 \caption{Known Extended Attributes in MacOS}
 \label{tbl:macosxattr}
-\begin{tabular}{@{}p{2cm}p{7cm}@{}}
+\begin{tabular}{@{}p{1cm}p{10cm}@{}}
 \toprule
 Name & Description\\
 \midrule
 \texttt{com.apple.FinderInfo}\\
-& Information used by Apple's Finder, binary. The first four bytes of this are the file type, followed by the file creator. These attributes can be viewed with \verb|GetFileInfo| and set with \verb|SetFile|, and are remnants of MacOS Classic.\\
-\texttt{com.apple.ResourceFork} & The resource fork of the file is stored internally as an extended attribute. This contains the raw data of the resource fork, which can also be accessed with \texttt{file/..namedfork/rsrc}.\\
-\texttt{com.apple.lastuseddate\#PS} & Binary information representing the last time it was used. Used by iCloud to offload files that are seldomly used and backed up in iCloud.\\
-\texttt{com.apple.quarantine} & Marker used for filed that have been downloaded by Safari.\\
-\texttt{com.apple.metadata:\emph{name}} & Names used by Apple to store metadata. These usually contain data in binary propery list format (see \texttt{man plist} for more information).\\
-\texttt{com.apple.iwork.documentUUID\#PS} & \\
-\texttt{com.apple.icloud.desktop} & \\
-\texttt{com.apple.progress.fractionCompleted} & Contains information about how much a task has been completed.\\
-\texttt{com.apple.rootless} & Marks items which are protected by \gls{sip}.\\
+& 32-byte binary block of information used by Apple's Finder. The first four bytes of this are the file type, followed by the file creator. These attributes can be viewed with \verb|GetFileInfo| and set with \verb|SetFile|, and are remnants of MacOS Classic. They can also be queried with the \verb|getattrlist()| syscall.\\
+\texttt{com.apple.ResourceFork}\\
+& The resource fork of the file is stored internally as an extended attribute. This contains the raw data of the resource fork, which can also be accessed with \texttt{file/..namedfork/rsrc}.\\
+\texttt{com.apple.lastuseddate\#PS}\\
+& Binary information representing the last time it was used. Used by iCloud to offload files that are seldomly used and backed up in iCloud.\\
+\texttt{com.apple.quarantine}\\
+& Marker used for filed that have been downloaded.\\
+\texttt{com.apple.metadata:\emph{name}}\\
+& Names used by Apple to store metadata. These usually contain data in binary propery list format (see \texttt{man plist} for more information).\\
+\texttt{com.apple.iwork.documentUUID\#PS}\\
+& A 16-byte unique identifier for an iWork document.\\
+\texttt{com.apple.icloud.desktop}\\
+& \\
+\texttt{com.apple.progress.fractionCompleted}\\
+& Contains information about how much a task has been completed.\\
+\texttt{com.apple.rootless}\\
+& Marks items which are protected by \gls{sip}.\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1140,7 +1149,7 @@ Name & Description\\
 \centering
 \caption{Known Metadata Attributes in MacOS}
 \label{tbl:macosmetaattr}
-\begin{tabular}{@{}lp{7cm}@{}}
+\begin{tabular}{@{}lp{6cm}@{}}
 \toprule
 Name & Description\\
 \midrule
@@ -1164,7 +1173,175 @@ Name & Description\\
 
 Table \ref{tbl:macosflags} lists some of the known extended attributes used by Apple on MacOS. For the metadata attributes, Table \ref{tbl:macosmetaattr} lists some known names. Apart from \emph{com.apple.FinderInfo}, none of these at
 
-\subsection{Capabilities}
+\subsubsection{Quarantine}
+
+The MacOS quarantine functionality is perhaps interesting. Every file that gets downloaded is \emph{tagged} with an extended attribute named \emph{com.apple.quarantine}. This attribute contains information about the file that is used to limit what one can to with it in order to protect the system.
+
+\begin{verbatim}
+$ lsxattr com.apple.quarantine ~/Desktop/cpumemory.pdf
+0081;5d32ee84;Firefox;53CAC546-3478-480D-9A2B-2FC9EAE73BA5
+\end{verbatim}
+The format of this tag consist of four parts, separated by semicolons. The first part is the Gatekeeper score. The higher this score, the better. The next part is a hex-encoded timestamp. This particular one decodes to 1563618948, which is 2019-07-20 12:35:48 +0200 in my local time. Finally, the last part is a \gls{uuid}, representing this file in the Gatekeeper database. If the file is an application and is launched, Gatekeeper will check if it is a known malware, and prevent it from executing if it is.
+
+The Gatekeeper database is a regular old SQLite database that is kept at \texttt{\textasciitilde/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2}.
+
+% https://eclecticlight.co/2019/10/03/how-has-xprotect-changed/
+
+In addition to the Gatekeeper quarantine, Apple also has the Xprotect, which can blacklist Apps and specific versions of apps based on their certificates, outdated Internet Plugins, Safari extensions, and malware based on \textsc{yara} rules\footnote{See \url{https://yara.readthedocs.io/en/latest/} for more information on \textsc{yara}.}.
+
+\subsection{Linux Capabilities}
+
+We have taken a look at the setuid feature before, which lets an executable run with the \gls{uid} of it's owner rather than the person who executes it. This is mostly used to let regular users perform certain controlled tasks that are normally restricted to superusers.
+
+However, this system has some disadvantages. Mainly that superuser privileges are very broad, and bugs occur in software. Therefore, it is best to limit the capabilities that a setuid program has to only that which it actually needs. This is to protect itself in the case in which a setuid program is exploitable, because otherwise any regular user can get full superuser privileges.
+
+One pattern that is easy to employ for programs running as superuser is to perform the privileged action early on, such as opening a restricted file or socket, and dropping its privilege level down to that of a regular user as soon as it can. 
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{Linux Capabilities}
+\label{tbl:linuxcaps}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\verb|CAP_AUDIT_CONTROL| &
+Enable and disable kernel auditing; change auditing filter rules; 
+retrieve auditing status and filtering rules.\\
+
+\verb|CAP_AUDIT_READ| &
+Allow reading the audit log via a multicast netlink socket.\\
+
+\verb|CAP_AUDIT_WRITE| &
+Write records to kernel auditing log.\\
+
+\verb|CAP_BLOCK_SUSPEND| &
+Employ features that can block system suspend (\emph{epoll}, \texttt{EPOLLWAKEUP}, \texttt{/proc/sys/wake\_lock}).\\
+
+\verb|CAP_CHOWN| &
+Make arbitrary changes to file UIDs and GIDs.\\
+
+\verb|CAP_DAC_OVERRIDE| &
+Bypass file read, write, and execute permission checks.\\
+
+\verb|CAP_DAC_READ_SEARCH| &
+Bypass file read permission checks and directory read and execute permission checks.\\
+
+\verb|CAP_FOWNER| &
+\\
+
+\verb|CAP_FSETID| &
+\\
+
+\verb|CAP_IPC_LOCK| &
+Lock memory (\emph{mlock}, \emph{mlockall}, \emph{mmap}, \emph{shmctl})\\
+
+\verb|CAP_IPC_OWNER| &
+Bypass permission checks for operations on System V IPC objects.\\
+
+\verb|CAP_KILL| &
+Bypass permission checks for sending signals.\\
+
+\verb|CAP_LEASE| &
+Establish leases on arbitrary files.\\
+
+\verb|CAP_LINUX_IMMUTABLE| &
+Set the \verb|FS_APPEND_FL| and \verb|FS_IMMUTABLE_FL| inode flags.\\
+
+\verb|CAP_MAC_ADMIN| &
+Allow MAC configuration or state changes.\\
+
+\verb|CAP_MAC_OVERRIDE| &
+Override Mandatory Access Control (MAC).\\
+
+\verb|CAP_MKNOD| &
+Create special files using \emph{mknod}.\\
+
+\verb|CAP_NET_ADMIN| &
+\\
+
+\verb|CAP_NET_BIND_SERVICE| &
+Bind a socket to Internet domain privileged ports.\\
+
+\verb|CAP_NET_BROADCAST| &
+Make socket broadcasts, and listen to multicasts. \emph{Unused}\\
+
+\verb|CAP_NET_RAW| &
+Use RAW and PACKET sockets; bind to any address for transparent proxying.\\
+
+\verb|CAP_SETGID| &
+Make arbitrary manipulations of process GIDs and supplementary GID list; forge GID when passing socket credentials via UNIX domain sockets; write a group ID mapping in a user namespace.\\
+
+\verb|CAP_SETFCAP| &
+Set arbitrary capabilities on a file.\\
+
+\verb|CAP_SETPCAP| &
+Add any capability from the calling thread's bounding set to its inheritable set; drop capabilities from the bounding set; make changes to the \emph{securebits} flags.\\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}
+\renewcommand{\arraystretch}{1.25}
+\centering
+\caption{Linux Capabilities, continued.}
+\label{tbl:linuxcaps2}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+\verb|CAP_SETUID| &
+Make arbitrary manipulations of process UIDs; forge UID when passing socket credentials via UNIX domain sockets; write a user ID mapping in a user namespace.\\
+
+\verb|CAP_SYS_ADMIN| &
+\\
+
+\verb|CAP_SYS_BOOT| &
+Use \verb|reboot()| and \verb|kexec_load()|.\\
+
+\verb|CAP_SYS_CHROOT| &
+Use \verb|chroot()|.\\
+
+\verb|CAP_SYS_MODULE| &
+Load and unload kernel modules.\\
+
+\verb|CAP_SYS_NICE| &
+Change the nice value for arbitrary processes; set real-time scheduling policies for calling process, and set scheduling policies and priorities for arbitrary processes; set CPU affinity for arbitrary processes; set I/O scheduling class and priority for arbitrary processes; migrate processes to arbitrary nodes; apply \verb|move_pages()| to arbitrary processes.\\
+
+\verb|CAP_SYS_PACCT| &
+Use \verb|acct()|.\\
+
+\verb|CAP_SYS_PTRACE| &
+Trace arbitrary processes using \verb|ptrace()|; apply \verb|get_robust_list()| to arbitrary processes; transfer data to or from the memory of arbitrary processes using \verb|process_vm_readv()| and \verb|process_vm_writev()|; inspect processes using \verb|kcmp()|.\\
+
+\verb|CAP_SYS_RAWIO| &
+\\
+
+\verb|CAP_SYS_RESOURCE| &
+\\
+
+\verb|CAP_SYS_TIME| &
+Set system clock; set real-time (hardware) clock.\\
+
+\verb|CAP_SYS_TTY_CONFIG| &
+Use \verb|vhangup()|; employ various privileged \verb|ioctl()| operations on virtual terminals.\\
+
+\verb|CAP_SYSLOG| &
+Perform privileged \verb|syslog()| operations; View kernel addresses exposed via \texttt{/proc} and other interfaces when kernel pointer restrictions are enabled.\\
+
+\verb|CAP_WAKE_ALARM| &
+Trigger something that will wake up the system (such as setting timers).\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+However, an even better approach is possible in Linux. Starting  with  kernel  2.2, Linux divides the privileges traditionally associated with superuser into distinct units, known as \emph{capabilities}, which can be independently enabled and disabled\footnote{See \texttt{man capabilities} for more information on these.}. This allows a process to only have exactly those rights which it needs — and not more, reducing potential security risks. Table \ref{tbl:linuxcaps} lists all capabilities known to the Kernel as of now.
+
+The way this relates to filesystems is that starting with Linux version 2.6.24, it supports \emph{file capabilities}. This is similar to the setuid mechanism, however, instead of a single bit, one can specify exactly which capabilities an executable should have upon launch, rather than just which effective \gls{uid} it should take on. This information is stored in the extended attribute \emph{security.capability}.
+
+
 
 \subsection{Access Control Lists}
 
