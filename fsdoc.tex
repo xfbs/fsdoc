@@ -918,16 +918,31 @@ Name & Description\\
 \end{tabular}
 \end{table}
 
-The \verb|lsattr| utility included allows querying the Kernel for attributes of filesystem entries. It decodes the flags into human-readable names.
+The \verb|chattr| and \verb|lsattr| utilities included allows querying the Kernel for attributes of filesystem entries, and changing attributes. It decodes the flags into human-readable names.
 
 \begin{verbatim}
 $ lsattr file
 extent
+$ sudo chattr append,nodump file
+$ lsattr file
+extent,append,nodump
+$ unlink file
+file: Operation not permitted
+$ sudo chattr noappend,dump file
+$ unlink file
 \end{verbatim}
 
-\subsubsection{Append-only file}
+\subsubsection{Append-only}
 
-The xxx.
+The \emph{append} flag changes a file to be append-only. Unlike on MacOS, it requires superuser privileges to set or clear this flag. A file with this flag set can only be appended to, it cannot be overwritten, renamed or deleted.
+
+\subsubsection{Immutable}
+
+The \emph{immutable} flag prevents changes to a file. It also prevents the file from being renamed or deleted, and requires superuser privileges to set or clear.
+
+\subsubsection{Project inherit}
+
+Linux has the concept of a \emph{project number} that is set on files. This is used to, for example, set project quotas (see Quota section for more information on this). When set on a directory, the \emph{projinherit} flag means that entries created in this directory inherit the project number of the directory.
 
 \subsection{MacOS Flags}
 
@@ -1034,7 +1049,7 @@ The opaque flag plays a role when using a union mount. This happens when mountin
 
 \subsubsection{Hidden}
 
-The hidden flag hides files or folders that it is defined on from the GUI. 
+The hidden flag hides files or folders that it is defined on from the \gls{gui}. 
 
 \begin{figure}
 \centering\caption{Hidden Makefile}\label{fig:macoshidden}
@@ -1055,11 +1070,19 @@ The archived flag is not handled by the kernel itself. It can be set to mark tha
 
 \subsubsection{Restricted}
 
+The restricted flag adds restrictions to system executables, such as not being able to call \verb|strace()| on them. It cannot be set or unset while \gls{sip} is in effect.
+
 \subsubsection{Nounlink}
+
+The nounlink flag prevents a file from being deleted. It cannot be set or unset while \gls{sip} is in effect.
 
 \subsubsection{Tracked}
 
+% TODO write
+
 \subsubsection{Compressed}
+
+The \emph{compressed} flag signals that a file is stored compressed in the filesystem.
 
 \subsubsection{Data Vault}
 
@@ -1183,7 +1206,7 @@ Name & Description\\
 \end{tabular}
 \end{table}
 
-Table \ref{tbl:macosflags} lists some of the known extended attributes used by Apple on MacOS. For the metadata attributes, Table \ref{tbl:macosmetaattr} lists some known names. Apart from \emph{com.apple.FinderInfo}, none of these at
+Table \ref{tbl:macosxattr} lists some of the known extended attributes used by Apple on MacOS. For the metadata attributes, Table \ref{tbl:macosmetaattr} lists some known names. Apart from \emph{com.apple.FinderInfo}, none of these are known to the kernel, and are meaningful only to userspace applications.
 
 \subsubsection{Quarantine}
 
@@ -1367,11 +1390,28 @@ $ getcap proccap
 \end{verbatim}
 With this scheme, a \verb|ping| utility can be constructed that does not need to use the setuid bit, and similarly, services using privileged ports can be changed not to need to be run as superuser.
 
-\subsection{Linux Access Control Lists}
+\section{Access Control Lists (ACL)}
+
+In section \ref{sec:permissions}, we have gotten to know the \textsc{unix} permissions model. This model is good because it is simple, allowing for separate permissions for three different groups: the owner of the file, the owning group of the file, and everyone else. However, this system is also somewhat limiting, as it does not allow giving permissions to multiple groups, or specific select users.
+
+\gls{acl} are one way to solve this issue. With them, instead of having three fixed sets of permissions, one has a list of users and groups and a (potentially different) set of permissions attached to each. For example, with \gls{acl}, one could easily give read access to a file to a person from another team. And example of such a list could be like follows.
+
+\begin{verbatim}
+user:patrick::rw-
+group:engineering:rw-
+user:thomas::r--
+group:accounting:r--
+\end{verbatim}
+
+The downside of \gls{acl} is that they have added complexity. Instead of a single three-digit octal number being able to describe the access permissions to a file, it is a (potentially long) list. For this reason, adoption of \gls{acl} is not widespread.
+
+Nevertheless, both Linux and MacOS have implementations for \gls{acl}. Although their implementations achieve the same thing, they look quite a bit different, at least in the syntax.
+
+\subsection{Linux}
 
 \gls{acl} is a feature by which access to filesystem entries can be controlled more finely than with UNIX permissions\footnote{See \texttt{man acl} for more information}.
 
-\subsection{MacOS Access Control Lists}
+\subsection{MacOS}
 
 In the same spirit as Linux's \gls{acl}, MacOS also has an implementation of them, however on this platform, they work radically different.
 
