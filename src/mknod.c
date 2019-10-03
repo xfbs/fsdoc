@@ -6,6 +6,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef __linux__
+#include <sys/sysmacros.h>
+#endif
+
 typedef struct {
     const char *name;
     mode_t mode;

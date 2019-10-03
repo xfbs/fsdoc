@@ -24,7 +24,7 @@ fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
 
 src/%: src/%.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
 	$(RM) fsdoc.pdf

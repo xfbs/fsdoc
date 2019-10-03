@@ -3,6 +3,10 @@
 #include <sys/xattr.h>
 #include <string.h>
 
+#ifdef __linux__
+#define listxattr(file, buf, len, out) listxattr(file, buf, len)
+#endif
+
 int main(int argc, char *argv[]) {
     const char *progname = argv[0];
 
