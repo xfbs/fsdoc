@@ -8,7 +8,7 @@ ifeq ($(shell uname -s),Darwin)
 endif
 
 ifeq ($(shell uname -s),Linux)
-	TOOLS += lsattr lscap proccap
+	TOOLS += lsattr getcap setcap proccap
 	LDFLAGS += -lcap
 endif
 
