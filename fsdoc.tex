@@ -1063,15 +1063,15 @@ Not every bit in the bitfield has a name. Undocumented bits can still be set, bu
 
 \section{Extended Attributes}
 
-Extended Attributes allow storing of arbitrary metadata of files on a file system. The concept of them was from the \gls{posix}\.1e draft which was withdrawn.
+Extended Attributes, often abbreviated to \emph{xattrs}, allow storing of arbitrary metadata of files on a file system. The concept of them was from the \gls{posix}\.1e draft which was withdrawn, but is still implemented on a lot of systems.
+
+Usually, extended attributes work like a key-value store, using arbitrary strings as keys and arbitrary data as values. The amount and size of attributes that can be set depend on the filesystem. Some filesystems, such as \gls{fat}, do not support them at all, while others like the \gls{ext} family of filesystems limit them.
 
 % https://unix.stackexchange.com/questions/489820/why-was-posix-1e-withdrawn
 
 % https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/limits.h
 
-The amount and size of attributes that can be set depend on the filesystem. Some filesystems, such as \gls{fat}, do not support them at all, while others like the \gls{ext} family of filesystems limit them.
-
-POSIX Extended Attributes are divided into different namespaces. The \emph{user} namespace has no restrictions on what attributes can be set. 
+\gls{posix} Extended Attributes are divided into different namespaces, with different restrictions on who and what can be set. The \emph{user} namespace has no restrictions on what attributes can be set. 
 
 \subsection{Capabilities}
 
