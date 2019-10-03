@@ -1097,7 +1097,20 @@ Usually, extended attributes work like a key-value store, using arbitrary string
 
 % https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/limits.h
 
-\gls{posix} Extended Attributes are divided into different namespaces, with different restrictions on who and what can be set. The \emph{user} namespace has no restrictions on what attributes can be set.
+It is possible to list, retrieve and set extended attributes using the \verb|listxattrs()|, \verb|setxattr()| and \verb|getxattr()| syscalls. These differ in their signatures between Linux on MacOS, but work similar enough. There is a few of tools included in this project allowing working with extended attributes.
+
+\begin{verbatim}
+$ mkfile file 644
+$ echo "Hello" | setxattr user.message file
+$ echo "Patrick" | setxattr user.name file
+$ lsxattr file
+user.message
+user.name
+$ getxattr user.message file
+Hello!
+\end{verbatim}
+
+Note that there are restrictions to the names of the extended attributes that can be used. In Linux, only names beginning with \verb|user.| can be used freely, other namespaces are reserved by the operating system and may need privileges to set.
 
 \subsection{MacOS Extended Attributes}
 
