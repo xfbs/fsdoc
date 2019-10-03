@@ -1193,10 +1193,6 @@ In addition to the Gatekeeper quarantine, Apple also has the Xprotect, which can
 
 We have taken a look at the setuid feature before, which lets an executable run with the \gls{uid} of it's owner rather than the person who executes it. This is mostly used to let regular users perform certain controlled tasks that are normally restricted to superusers.
 
-However, this system has some disadvantages. Mainly that superuser privileges are very broad, and bugs occur in software. Therefore, it is best to limit the capabilities that a setuid program has to only that which it actually needs. This is to protect itself in the case in which a setuid program is exploitable, because otherwise any regular user can get full superuser privileges.
-
-One pattern that is easy to employ for programs running as superuser is to perform the privileged action early on, such as opening a restricted file or socket, and dropping its privilege level down to that of a regular user as soon as it can. 
-
 \begin{table}
 \renewcommand{\arraystretch}{1.25}
 \centering
@@ -1211,13 +1207,13 @@ Enable and disable kernel auditing; change auditing filter rules;
 retrieve auditing status and filtering rules.\\
 
 \verb|CAP_AUDIT_READ| &
-Allow reading the audit log via a multicast netlink socket.\\
+Allow reading the audit log.\\
 
 \verb|CAP_AUDIT_WRITE| &
 Write records to kernel auditing log.\\
 
 \verb|CAP_BLOCK_SUSPEND| &
-Employ features that can block system suspend (\emph{epoll}, \texttt{EPOLLWAKEUP}, \texttt{/proc/sys/wake\_lock}).\\
+Employ features that can block system suspend.\\
 
 \verb|CAP_CHOWN| &
 Make arbitrary changes to file UIDs and GIDs.\\
@@ -1229,10 +1225,10 @@ Bypass file read, write, and execute permission checks.\\
 Bypass file read permission checks and directory read and execute permission checks.\\
 
 \verb|CAP_FOWNER| &
-\\
+Bypass permission checks on operations that normally require the filesystem UID of the process to match the UID of the file; set inode flags on arbitrary files; set \gls{acl} on arbitrary files; ignore directory sticky bit on file deletion; specify \verb|O_NOATIME| for arbitrary files.\\
 
 \verb|CAP_FSETID| &
-\\
+Don't clear set-user-ID and set-group-ID mode bits when a file is modified; set the set-group-ID bit for a file whose GID does not match the filesystem or any of the supplementary GIDs of the calling process.\\
 
 \verb|CAP_IPC_LOCK| &
 Lock memory (\emph{mlock}, \emph{mlockall}, \emph{mmap}, \emph{shmctl})\\
@@ -1259,7 +1255,7 @@ Override Mandatory Access Control (MAC).\\
 Create special files using \emph{mknod}.\\
 
 \verb|CAP_NET_ADMIN| &
-\\
+Perform various network-related operations.\\
 
 \verb|CAP_NET_BIND_SERVICE| &
 Bind a socket to Internet domain privileged ports.\\
@@ -1271,14 +1267,10 @@ Make socket broadcasts, and listen to multicasts. \emph{Unused}\\
 Use RAW and PACKET sockets; bind to any address for transparent proxying.\\
 
 \verb|CAP_SETGID| &
-Make arbitrary manipulations of process GIDs and supplementary GID list; forge GID when passing socket credentials via UNIX domain sockets; write a group ID mapping in a user namespace.\\
+Make arbitrary manipulations of process GIDs and supplementary GID list.\\
 
 \verb|CAP_SETFCAP| &
 Set arbitrary capabilities on a file.\\
-
-\verb|CAP_SETPCAP| &
-Add any capability from the calling thread's bounding set to its inheritable set; drop capabilities from the bounding set; make changes to the \emph{securebits} flags.\\
-
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1292,11 +1284,14 @@ Add any capability from the calling thread's bounding set to its inheritable set
 \toprule
 Name & Description\\
 \midrule
+\verb|CAP_SETPCAP| &
+Add any capability from the calling thread's bounding set to its inheritable set; drop capabilities from the bounding set; make changes to the \emph{securebits} flags.\\
+
 \verb|CAP_SETUID| &
-Make arbitrary manipulations of process UIDs; forge UID when passing socket credentials via UNIX domain sockets; write a user ID mapping in a user namespace.\\
+Make arbitrary manipulations of process UIDs.\\
 
 \verb|CAP_SYS_ADMIN| &
-\\
+Perform a whide range of system administrative tasks, including mounting and unmounting filesystems, handling swap, setting filesystem quotas. This capability is overloaded.\\
 
 \verb|CAP_SYS_BOOT| &
 Use \verb|reboot()| and \verb|kexec_load()|.\\
@@ -1308,17 +1303,19 @@ Use \verb|chroot()|.\\
 Load and unload kernel modules.\\
 
 \verb|CAP_SYS_NICE| &
-Change the nice value for arbitrary processes; set real-time scheduling policies for calling process, and set scheduling policies and priorities for arbitrary processes; set CPU affinity for arbitrary processes; set I/O scheduling class and priority for arbitrary processes; migrate processes to arbitrary nodes; apply \verb|move_pages()| to arbitrary processes.\\
+Change the nice value for arbitrary processes; set scheduling policies, priorities and CPU affinity for arbitrary processes; migrate processes to arbitrary nodes.\\
 
 \verb|CAP_SYS_PACCT| &
-Use \verb|acct()|.\\
+Use \verb|acct()| to enable process accounting.\\
 
 \verb|CAP_SYS_PTRACE| &
 Trace arbitrary processes using \verb|ptrace()|; apply \verb|get_robust_list()| to arbitrary processes; transfer data to or from the memory of arbitrary processes using \verb|process_vm_readv()| and \verb|process_vm_writev()|; inspect processes using \verb|kcmp()|.\\
 
+% TODO
 \verb|CAP_SYS_RAWIO| &
 \\
 
+% TODO
 \verb|CAP_SYS_RESOURCE| &
 \\
 
@@ -1337,16 +1334,23 @@ Trigger something that will wake up the system (such as setting timers).\\
 \end{tabular}
 \end{table}
 
-However, an even better approach is possible in Linux. Starting  with  kernel  2.2, Linux divides the privileges traditionally associated with superuser into distinct units, known as \emph{capabilities}, which can be independently enabled and disabled\footnote{See \texttt{man capabilities} for more information on these.}. This allows a process to only have exactly those rights which it needs — and not more, reducing potential security risks. Table \ref{tbl:linuxcaps} lists all capabilities known to the Kernel as of now.
+However, this system has some disadvantages. Mainly that superuser privileges are very broad, and bugs occur in software. Therefore, it is best to limit the capabilities that a setuid program has to only that which it actually needs. This is to protect itself in the case in which a setuid program is exploitable, because otherwise any regular user can get full superuser privileges.
+
+One pattern that is easy to employ for programs running as superuser is to perform the privileged action early on, such as opening a restricted file or socket, and dropping its privilege level down to that of a regular user as soon as it can. 
+
+However, an even better approach is possible in Linux. Starting  with  kernel  2.2, Linux divides the privileges traditionally associated with superuser into distinct units, known as \emph{capabilities}, which can be independently enabled and disabled\footnote{See \texttt{man capabilities} for more information on these.}. This allows a process to only have exactly those rights which it needs — and not more, reducing potential security risks. Tables \ref{tbl:linuxcaps} and \ref{tbl:linuxcaps2} list all capabilities known to the kernel as of now.
 
 The way this relates to filesystems is that starting with Linux version 2.6.24, it supports \emph{file capabilities}. This is similar to the setuid mechanism, however, instead of a single bit, one can specify exactly which capabilities an executable should have upon launch, rather than just which effective \gls{uid} it should take on. This information is stored in the extended attribute \emph{security.capability}.
 
 
 
-\subsection{Access Control Lists}
+\subsection{Linux Access Control Lists}
 
 \gls{acl} is a feature by which access to filesystem entries can be controlled more finely than with UNIX permissions\footnote{See \texttt{man acl} for more information}.
 
+\subsection{MacOS Access Control Lists}
+
+In the same spirit as Linux's \gls{acl}, MacOS also has an implementation of them, however on this platform, they work radically different.
 
 \section{Alternate Data Streams}\label{sec:ads}
 
