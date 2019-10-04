@@ -15,7 +15,7 @@
 \usepackage{booktabs}
 \usepackage{listings}
 
-%\usepackage{syntax}
+\usepackage{syntax}
 \usepackage{amsmath}
 \usepackage[super]{nth}
 
@@ -70,6 +70,7 @@
 \newabbreviation{pid}{pid}{Process ID}
 \newabbreviation{url}{url}{Universal Resource Locator}
 \newabbreviation{uuid}{uuid}{Universally Unique Identifier}
+\newabbreviation{json}{json}{JavaScript Object Notation}
 \makeglossaries
 
 % don't show subsubsections in toc
@@ -1120,20 +1121,6 @@ Usually, extended attributes work like a key-value store, using arbitrary string
 
 % https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/limits.h
 
-It is possible to list, retrieve and set extended attributes using the \verb|listxattrs()|, \verb|setxattr()| and \verb|getxattr()| syscalls. These differ in their signatures between Linux on MacOS, but work similar enough. There is a few of tools included in this project allowing working with extended attributes.
-
-\begin{verbatim}
-$ mkfile file 644
-$ echo "Hello" | setxattr user.message file
-$ echo "Patrick" | setxattr user.name file
-$ lsxattr file
-user.message
-user.name
-$ getxattr user.message file
-Hello
-\end{verbatim}
-Note that there are restrictions to the names of the extended attributes that can be used. In Linux, only names in the \verb|user.*| namespace can be used freely. Other namespaces are reserved by the operating system and may need privileges to set. MacOS does not place such restrictions on the names of extended attributes, but it does recommend that reverse domain name syntax be used, like \verb|com.apple.AttributeName|, in order to prevent clashes.
-
 \subsection{MacOS Extended Attributes}
 
 % SetFile -type 'GSPb' -creator 'GSP+' 
@@ -1141,7 +1128,9 @@ Note that there are restrictions to the names of the extended attributes that ca
 % GetFileInfo -c
 % what do these do?
 
-MacOS offers extended attributes that can be accessed and modified with the \verb|listxattr()|, \verb|getxattr()| and \verb|setxattr()| syscall. They are used by the system in various places, for example HFS+ Resource Forks are kept in an extended attribute named \emph{com.apple.ResourceFork}.
+MacOS offers extended attributes that can be accessed and modified with the \verb|listxattr()|, \verb|getxattr()| and \verb|setxattr()| syscall. They are used by the system in various places, for example HFS+ Resource Forks are kept in an extended attribute named \emph{com.apple.ResourceFork}. 
+
+MacOS does not place any restrictions on the names of extended attributes, but it does recommend that reverse domain name syntax be used, like \verb|com.apple.AttributeName|, in order to prevent clashes.
 
 \begin{table}
 \renewcommand{\arraystretch}{1.25}
@@ -1208,6 +1197,22 @@ Name & Description\\
 
 Table \ref{tbl:macosxattr} lists some of the known extended attributes used by Apple on MacOS. For the metadata attributes, Table \ref{tbl:macosmetaattr} lists some known names. Apart from \emph{com.apple.FinderInfo}, none of these are known to the kernel, and are meaningful only to userspace applications.
 
+The tools \verb|lsxattr|, \verb|getxattr| and \verb|setxattr| allow working with extended attributes on MacOS. Here is an example of listing the extended attributes of a file, and extracting one and converting it from a binary format to \gls{json} for inspection.
+
+% TODO example of listing and setting attributes with xxd
+
+\begin{verbatim}
+$ lsxattr ~/Desktop/cpumemory.pdf
+com.apple.metadata:kMDItemWhereFroms
+com.apple.quarantine
+$ getxattr com.apple.metadata:kMDItemWhereFroms \
+> ~/Desktop/cpumemory.pdf | plutil -convert json -o - - | jq
+[
+  "https://people.freebsd.org/~lstewart/articles/cpumemory.pdf",
+  "https://duckduckgo.com/"
+]
+\end{verbatim}
+
 \subsubsection{Quarantine}
 
 The MacOS quarantine functionality is perhaps interesting. Every file that gets downloaded is \emph{tagged} with an extended attribute named \emph{com.apple.quarantine}. This attribute contains information about the file that is used to limit what one can to with it in order to protect the system.
@@ -1223,6 +1228,22 @@ The Gatekeeper database is a regular old SQLite database that is kept at \texttt
 % https://eclecticlight.co/2019/10/03/how-has-xprotect-changed/
 
 In addition to the Gatekeeper quarantine, Apple also has the Xprotect, which can blacklist Apps and specific versions of apps based on their certificates, outdated Internet Plugins, Safari extensions, and malware based on \textsc{yara} rules\footnote{See \url{https://yara.readthedocs.io/en/latest/} for more information on \textsc{yara}.}.
+
+\subsection{Linux Extended Attributes}
+
+On Linux, it is possible to list, retrieve and set extended attributes using the \verb|listxattrs()|, \verb|setxattr()| and \verb|getxattr()| syscalls. These differ in their signatures between Linux on MacOS, but work similar enough. The \verb|lsxattr|, \verb|getxattr| and \verb|setxattr| tools tools included in this project allowing working with extended attributes on Linux systems.
+
+\begin{verbatim}
+$ mkfile file 644
+$ echo "Hello" | setxattr user.message file
+$ echo "Patrick" | setxattr user.name file
+$ lsxattr file
+user.message
+user.name
+$ getxattr user.message file
+Hello
+\end{verbatim}
+Note that there are restrictions to the names of the extended attributes that can be used. In Linux, only names in the \verb|user.*| namespace can be used freely. Other namespaces are reserved by the operating system and may need privileges to set. 
 
 \subsection{Linux Capabilities}
 
@@ -1380,6 +1401,7 @@ The way this relates to filesystems is that starting with Linux version 2.6.24, 
 The kernel offers two functions, \verb|cap_set_file()| and \verb|cap_get_file()| for querying and updating file capabilities. Interally, this is stored in the extended attribute \emph{security.capability} as a bitmask. This project comes with the tools \verb|setcap| and \verb|getcap| which can be used to get and set the capabilities of a file, and the tool \verb|proccap| which queries it's own process capabilities and dumps them out.
 
 % TODO example of root capabilities, better example
+% fix path to proccap executable?
 
 \begin{verbatim}
 $ proccap
@@ -1388,7 +1410,26 @@ $ sudo setcap "cap_net_admin+pe" proccap
 $ getcap proccap
 = cap_net_admin+pe
 \end{verbatim}
+We can inspect how these bits are actually set in the filesystem. Using the \verb|getxattr| tool, it is possible to view them, with the help of the \verb|xxd| tool to convert the binary stream into a readable hexadeciamal output.
+
+\begin{verbatim}
+$ getxattr security.capability src/proccap | xxd
+00000000: 0100 0002 0010 0000 0000 0000 0000 0000  ................
+00000010: 0000 0000                                ....  
+\end{verbatim}
+Here the set bits can be seen in the hexadecimal output. Enabling all capabilities shows all the bits being set.
+
+\begin{verbatim}
+$ setcap =pei src/proccap
+$ getxattr security.capability src/proccap | xxd
+00000000: 0100 0002 ffff ffff ffff ffff ffff ffff  ................
+00000010: ffff ffff                                ....  
+\end{verbatim}
 With this scheme, a \verb|ping| utility can be constructed that does not need to use the setuid bit, and similarly, services using privileged ports can be changed not to need to be run as superuser.
+
+\subsection{Linux System Namespace}
+
+There are other extended attribute namespaces used in Linux. Security Enhanced Linux (SELinux) uses them to store information on files. The \verb|trusted| namespace can be used to store attributes to which ordinary processes do not have access (they require \verb|CAP_SYS_ADMIN| to read).
 
 \section{Access Control Lists (ACL)}
 
@@ -1413,9 +1454,103 @@ Nevertheless, both Linux and MacOS have implementations for \gls{acl}. Although 
 
 \subsection{MacOS}
 
-In the same spirit as Linux's \gls{acl}, MacOS also has an implementation of them, however on this platform, they work radically different.
+In the same spirit as Linux's \gls{acl}, MacOS also has an implementation of them, based on the \gls{posix} 1e standard. It has the methods \verb|acl_get_file()| and \verb|acl_set_file()| for retrieving and setting \gls{acl} from and on files.
+
+The utilities \verb|getacl| and \verb|setacl| can work with MacOS \gls{acl} on files.
+
+\begin{verbatim}
+$ setacl "user:root allow write" filename
+$ getacl filename
+user:root allow write  
+\end{verbatim}
+MacOS uses a special syntax for describing \gls{acl} that is unlike the one used by Linux. It is a textual syntax and allows adding rules for entities (users, groups) to allow or deny specific actions\footnote{See \texttt{man chmod} on MacOS to get a more detailed description of the ACL syntax.}.
+
+\begin{grammar}
+<acl> ::= <aclitem> | <aclitem> ‘;’ <acl>
+
+<aclitem> ::= <subject> <permission> <actions>
+
+<permission> ::= ‘allow’ | ‘deny’
+
+<subject> ::= ‘group:’ <name> | ‘user:’ <name>
+
+<actions> ::= <action> | <action> ‘,’ <actions>
+
+<action> ::= ‘read’ | ‘write’ | ‘append’ | ‘list’ | ...
+\end{grammar}
+
+Some examples of these \gls{acl} strings might look like the following. Here, access to the file is granted for a group, but revoked for some specific users.
+
+\begin{table}
+\centering
+\caption{List of Actions of MacOS ACL}
+\label{tbl:macosaclactions}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Name & Description\\
+\midrule
+delete & Delete the item.  Deletion may be granted by either this permission on an object or the delete_child right on the containing directory.\\
+readattr & Read an objects basic attributes.  This is implicitly granted if the object can be looked up and not explicitly denied.\\
+writeattr & Write an object's basic attributes.\\
+readextattr & Read extended attributes.\\
+writeextattr & Write extended attributes.\\
+readsecurity & Read an object's extended security information (\gls{acl}).\\
+writesecurity & Write an object's security information (ownership, mode, \gls{acl}).\\
+chown & Change an object's ownership.\\
+\midrule
+list & List entries.\\
+search & Look up files by name.\\
+add_file & Add a file.\\
+add_subdirectory & Add a subdirectory.\\
+delete_child & Delete a contained object. See the file delete permission above.\\
+\midrule
+read & Open for reading.\\
+write & Open for writing.\\
+append & Open for writing, but in a fashion that only allows writes into areas of the file not previously written.\\
+execute & Execute the file as a script or program.\\
+\midrule
+file_inherit & Inherit to files.\\
+directory_inherit & Inherit to directories.\\
+limit_inherit &  This flag is only relevant to entries inherited by subdirectories; it causes the directory_inherit flag to be cleared in the entry that is inherited, preventing further nested subdirectories from also inheriting the entry.\\
+only_inherit & The entry is inherited by created items but not considered when processing the \gls{acl}.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{verbatim}
+group:engineering allow list,read,write
+user:thomas deny write
+user:alice allow read,list
+user:testing allow append  
+\end{verbatim}
+Table \ref{tbl:macosaclactions} lists all \gls{acl} actions known to MacOS. These are all the permissions that can be given (\emph{allow}) or revoked (\emph{deny}) from users and groups. 
+
+These \gls{acl} rules override \gls{posix} permissions on MacOS. That means that even if a file is readable, if there is an \gls{acl} rule denying reading from it for the owner, it is not possible to read from the file.
+
+% TODO fix example for own tools
+
+\begin{verbatim}
+$ mkfile file 644
+$ setacl "patrick deny read" file
+$ cat file
+cat: file: Permission denied
+$ echo hello > file
+$ unlink file
+\end{verbatim}
+
+% TODO: check how formatting is done in chmod, ls -le
+
+% TODO check if ACLs override posix permissions?
+
+% what if you set an ACL on a file such that you cannot view or set ACLs on it?
 
 \section{Alternate Data Streams}\label{sec:ads}
+
+Alternate Data Streams, also called \emph{forks}, are a filesystem feature in which a file can have more than one body of data. Typically, files are expected to only contain one body of data: their content. However, with forks, files can contain multiple (usually named) other streams of data. 
+
+This was used extensively in MacOS Classic. Applications would store resources in other forks, and these resources could be edited, for example to localise an Application. Apple has since shifted to using \emph{Application Bundles}, which are essentially folders containing the executable and all the resources and data it needs. Hence, this feature is barely used anymore, except in some strange locations, such as Safari \verb|.webloc| files.
+
+One of the most common issues with forks is that they are sometimes not preserved when using utilities that don't support them, such as \verb|zip| or \verb|tar|. Even copying files between filesystems might not preserve them, and most filesystems don't support them at all. 
 
 \subsection{HFS+ Resource Fork}
 
@@ -1438,7 +1573,6 @@ $ ls -l@ file
 -rw-r--r--@ 1 pelsen  staff  0 Sep 27 22:49 file
         com.apple.ResourceFork  3  
 \end{verbatim}
-
 These resource forks are a feature carried over from classic MacOS, and are not really used anymore. In fact, the \gls{api} to access them, \emph{Resource Manager}, have been removed. There are, to the best of my knowledge, no other named forks apart from the resource fork exposed.
 
 \subsection{NTFS Alternate Data Streams}

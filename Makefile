@@ -4,7 +4,7 @@ BIBER	= biber
 TOOLS	= perms unlink rmdir mkdir mkfile mksym lssym lsdir stat chmod mknod lsxattr getxattr setxattr
 
 ifeq ($(shell uname -s),Darwin)
-	TOOLS += chflags lsflags
+	TOOLS += chflags lsflags getacl setacl
 endif
 
 ifeq ($(shell uname -s),Linux)
