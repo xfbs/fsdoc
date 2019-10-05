@@ -42,35 +42,97 @@
 \date{\today}
 
 \setabbreviationstyle{long-short-sc}
-\newabbreviation{fat}{fat}{File Allocation Table}
-\newabbreviation{ext}{ext}{Extended File System}
-\newabbreviation{ntfs}{ntfs}{New Technology File System}
-\newabbreviation{uid}{uid}{User ID}
-\newabbreviation{gid}{gid}{Group ID}
-\newabbreviation{fifo}{fifo}{First In, First Out}
-\newabbreviation{ipc}{ipc}{Interprocess Communication}
-\newabbreviation{icmp}{icmp}{Internet Control Message Protocol}
-\newabbreviation{acl}{acl}{Access Control Lists}
-\newabbreviation{posix}{posix}{Portable Operating Systems Interface}
-\newabbreviation{gui}{gui}{Guided User Interface}
-\newabbreviation{sip}{sip}{System Integrity Protection}
-\newabbreviation{api}{api}{Application Programming Interface}
-\newabbreviation{hfs+}{hfs+}{Hiearchical File System Plus}
-\newabbreviation{apfs}{apfs}{Apple File System}
-\newabbreviation{ssd}{ssd}{Solid State Drive}
-\newabbreviation{fuse}{fuse}{Filesystem In Userspace}
-\newabbreviation{lsb}{lsb}{Linux Standard Base}
-\newabbreviation{fhs}{fhs}{Filesystem Hiearchy Standard}
-\newabbreviation{lfn}{lfn}{Long File Names}
-\newabbreviation{usb}{usb}{Universal Serial Bus}
-\newabbreviation{http}{http}{Hypertext Transfer Protocol}
-\newabbreviation{tcp}{tcp}{Transmission Control Protocol}
-\newabbreviation{udp}{udp}{User Datagram Protocol}
-\newabbreviation{dns}{dns}{Domain Name Service}
-\newabbreviation{pid}{pid}{Process ID}
-\newabbreviation{url}{url}{Universal Resource Locator}
-\newabbreviation{uuid}{uuid}{Universally Unique Identifier}
-\newabbreviation{json}{json}{JavaScript Object Notation}
+\renewcommand{\glsnamefont}[1]{\MakeUppercase{#1}}
+
+\newabbreviation[description={File Allocation Table. Simple filesystem developed by Microsoft in the eighties. Still used today due to its simplicity and ease of implementation.}]
+{fat}{fat}{File Allocation Table}
+
+\newabbreviation[description={Family of filesystems derived from the early Minix filesystem. Used frequenly in Linux systems.}]
+{ext}{ext}{Extended File System}
+
+\newabbreviation[description={New Technology File System. Developed by Microsoft to replace the \glsname{fat} filesystem.}]
+{ntfs}{ntfs}{New Technology File System}
+
+\newabbreviation[description={User Identifier. Number uniquely associated with a user, similar to \glsname{gid}.}]
+{uid}{uid}{User Identifier}
+
+\newabbreviation[description={Group Identifier. Number uniquely associated with a group, similar to \glsname{uid}.}]
+{gid}{gid}{Group Identifier}
+
+% TODO fix description.
+\newabbreviation[description={First In, First Out. A special type of file used on \textsc{unix} operating system that acts as a pipe.}]
+{fifo}{fifo}{First In, First Out}
+
+\newabbreviation[description={Interprocess Communication. Transfer of messages and data between processes on the same machine.}]
+{ipc}{ipc}{Interprocess Communication}
+
+\newabbreviation[description={Internet Control Message Protocol. Protocol used to exchange information about \textsc{ip} operations between systems. Typically used for diagnostic or control purposes or generated in response to errors in \textsc{ip} operations.}]
+{icmp}{icmp}{Internet Control Message Protocol}
+
+\newabbreviation[description={Access Control Lists. Mechanism for specifying exactly which users and groups have access to which operations on files.}]
+{acl}{acl}{Access Control Lists}
+
+\newabbreviation[description={Portable Operating Systems Interface. Standard used to maintain compatibility with operating systems. Linux and macOS partially follow this standard.}]
+{posix}{posix}{Portable Operating Systems Interface}
+
+\newabbreviation[description={Graphical User Interface. Interface that is graphical in nature, rather than the (sometimes more powerful, but also more difficult) textual user interface.}]
+{gui}{gui}{Graphical User Interface}
+
+\newabbreviation[description={System Integrity Protection. Security mechanism implemented by Apple on MacOS that protects system-owned files and directories against modifications by processes without a specific entitlements, even if executed by the superuser.}]
+{sip}{sip}{System Integrity Protection}
+
+\newabbreviation[description={Application Programming Interface. Interface, typically functions, that can be used by programmers to interact with a system.}]
+{api}{api}{Application Programming Interface}
+
+\newabbreviation[description={Hierarchical File System Plus. Filesystem developed by Apple to replace the previous \textsc{hfs}. Used on all products until replaced by \glsname{apfs}.}]
+{hfs+}{hfs+}{Hierarchical File System Plus}
+
+\newabbreviation[description={Apple File System. Replacement for \glsname{hfs+}. Optimised for flash \glsname{ssd} storage, and with a focus on native encryption capabilities.}]
+{apfs}{apfs}{Apple File System}
+
+\newabbreviation[description={Solid State Drive. Disk drive that uses no moving parts. Typically flash-based storage, which has the advantage of having much faster read and write speeds than traditional magnetic hard drives, and doesn't suffer from degradation of performance with random (non-sequential) access.}]
+{ssd}{ssd}{Solid State Drive}
+
+% TODO fix description.
+\newabbreviation[description={Filesystem In Userspace. \glsname{api} offered by the kernel on Linux and macOS to implement filesystems in userspace.}]
+{fuse}{fuse}{Filesystem In Userspace}
+
+\newabbreviation[description={Linux Standard Base. Standard of the the software system structure, including the Filesystem Hierarchy Standard used in the Linux kernel.}]
+{lsb}{lsb}{Linux Standard Base}
+
+\newabbreviation[description={Filesystem Hiearchy Standard. Standard of the structure of the filesystem on Linux operating systems.}]
+{fhs}{fhs}{Filesystem Hiearchy Standard}
+
+\newabbreviation[description={Long File Names. Extension (hack, in a way) of the \glsname{fat} filesystem to support proper long names rather than the nine-character names it was originally designed for.}]
+{lfn}{lfn}{Long File Names}
+
+\newabbreviation[description={Universal Serial Bus. Industry standard that of cables and protocols to connect peripheral devices to computers. Popularised by Apple's iMacs, currently the most popular communication standard.}]
+{usb}{usb}{Universal Serial Bus}
+
+\newabbreviation[description={Hypertext Transfer Protocol. Protocol invented in the 90ies by Tim Berners-Lee at \textsc{cern}. Used to access websites on the internet.}]
+{http}{http}{Hypertext Transfer Protocol}
+
+\newabbreviation[description={Transmission Control Protocol. Protocol used to transmit streams of data in between multiple systems on the network. It is reliable, meaning that packets are re-sent when packet loss occurs. Most popular protocol for communicating.}]
+{tcp}{tcp}{Transmission Control Protocol}
+
+\newabbreviation[description={User Datagram Protocol. Protocol used to send (unreliable) messages between computer systems on the network.}]
+{udp}{udp}{User Datagram Protocol}
+
+\newabbreviation[description={Domain Name Service. Used to look up information associated with domain names (such as \texttt{github.com}). Typically used to retrieve \textsc{ip} addresses of domain names.}]
+{dns}{dns}{Domain Name Service}
+
+\newabbreviation[description={Process Identifier. Number uniquely associated with a process.}]
+{pid}{pid}{Process Identifier}
+
+\newabbreviation[description={Universal Resource Locator. Reference to a web resource. Includes the protocol, domain name and path, in the format \url{https://github.com/xfbs/fsdoc}.}]
+{url}{url}{Universal Resource Locator}
+
+\newabbreviation[description={Universally Unique Identifier; 128-bit number used to identify information in computer systems. Typically shown as hexadecimal in the format \texttt{123e4567-e89b-12d3-a456-426655440000}.}]
+{uuid}{uuid}{Universally Unique Identifier}
+
+\newabbreviation[description={JavaScript Object Notation; Format used by JavaScript to serialise objects. Used widely as a serialisation format on the web, even outside of JavaScript.}]
+{json}{json}{JavaScript Object Notation}
+
 \makeglossaries
 
 % don't show subsubsections in toc
