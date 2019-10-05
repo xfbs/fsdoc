@@ -1584,13 +1584,53 @@ These resource forks are a feature carried over from classic MacOS, and are not 
 
 \section{Locks}
 
-File locking is supported with the \verb|flock()| syscall.
+On a system where many processes concurrently access the filesystem, it is sometimes useful to have a mechanism by which processes can prevent issues where one process is reading from a file while another process is writing to the same file, resulting in the first process reading the file in an inconsistent state.
+
+\gls{posix} offers file locks for exactly this purpose. These can be used to put shared or exclusive advisory locks on files, using the \verb|flock()| syscall. This is more or less portable in between systems.
+
+The issue with this implementation is that these locks are \emph{advisory}, meaning that processes can ignore locks present on files and write anyways. Additionally, processes need to be locking-aware and check for the presence of locks, which is not widely implemented. Therefore, this mechanism is only useful when software is specifically written for using locks.
+
+\subsection{Linux Advisory Record Locks}
+
+Linux goes beyond the interface mandated by \gls{posix} and also offers advisory record locks using the \verb|fnctl()| syscall\footnote{See \texttt{man fcntl} for more information on this syscall.}, which are locks that can be placed on specific regions of a file, rather than on the whole file itself.
+
+\subsection{Linux Open File Descriptor Locks}
+
+Linux also offers open file descriptor locks, which operate in a way that is similar to records locks, but instead of applying to a whole process, they apply to open file descriptors.
+
+\subsection{Linux Mandatory File Locking}
+
+Linux has support for mandatory locking. This support is unreliable and needs to be explicitly activated by setting a flag when mounting a filesystem. 
+
+\section{Miscellaneous File Operations}
+
+\subsection{Linux File Leases}
+
+Linux supports \emph{file leases}, which is a mechanism similar to that of file locking. With this mechanism, processes can request a lease on a file, and when they acquire it, know that they are the only process capable of interacting with the file. When another process opens the file and performs operations on it, the lease holder is notified and is given a set amount of time by the kernel to perform cleanup operations and downgrade its lease.
+
+\subsection{Linux File Sealing}
+
+\subsection{Linux File Read/Write Hints}
 
 % TODO: example, writeup.
 
 \section{Special Filesystems}
 
 % TODO: introduction, comparison to /dev, justification, some history.
+
+Special Filesystems are common on \textsc{unix} systems, in line with the \emph{everything is a file} metaphor of interacting with the system. These are filesystems that are typically either not present on the disk at all, or are not intended to store information, rather to interact with the kernel.
+
+When \textsc{unix} was designed, some very smart people came up with some very smart ideas that resulted in a system that is still widely popular today. One of these ideas is \emph{do one thing, and do it well}, which lead to great, powerful and combinable tools we use every day on the command line to interact with files. 
+
+The brilliant idea is that there are other streams of data on a system that are not files. And instead of reinventing the wheel to create a separate set of tools for working with those, it is easier to expose them through the filesystem interface.
+
+So, for example, the raw contents of a hard drive can be accessed as if it were a regular file, from a path such as \verb|/dev/sda| (more on this later). If a hard drive is to be erased, instead of needing a special tool (that potentially uses special syscalls), a generic tool such as \verb|dd| can be used to overwrite it.
+
+\begin{verbatim}
+$ dd if=/dev/zero of=/dev/sda bs=1m
+\end{verbatim}
+
+This is one of the properties that makes \textsc{unix} and its philosophy so powerful and so prevalent, from servers to phones to embedded devices. In this section we will explore some of the special filesystems offered on some operating systems, and what kind of information and data they make accessible.
 
 \subsection{Device}
 
