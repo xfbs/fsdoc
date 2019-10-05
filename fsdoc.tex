@@ -1465,6 +1465,7 @@ user:root allow write
 \end{verbatim}
 MacOS uses a special syntax for describing \gls{acl} that is unlike the one used by Linux. It is a textual syntax and allows adding rules for entities (users, groups) to allow or deny specific actions\footnote{See \texttt{man chmod} on MacOS to get a more detailed description of the ACL syntax.}.
 
+\setlength{\grammarindent}{8em}
 \begin{grammar}
 <acl> ::= <aclitem> | <aclitem> ‘;’ <acl>
 
@@ -1478,7 +1479,6 @@ MacOS uses a special syntax for describing \gls{acl} that is unlike the one used
 
 <action> ::= ‘read’ | ‘write’ | ‘append’ | ‘list’ | ...
 \end{grammar}
-
 Some examples of these \gls{acl} strings might look like the following. Here, access to the file is granted for a group, but revoked for some specific users.
 
 \begin{table}
@@ -1525,7 +1525,7 @@ user:testing allow append
 \end{verbatim}
 Table \ref{tbl:macosaclactions} lists all \gls{acl} actions known to MacOS. These are all the permissions that can be given (\emph{allow}) or revoked (\emph{deny}) from users and groups. 
 
-These \gls{acl} rules override \gls{posix} permissions on MacOS. That means that even if a file is readable, if there is an \gls{acl} rule denying reading from it for the owner, it is not possible to read from the file.
+These \gls{acl} rules override \gls{posix} permissions on MacOS. That means that even if a file is readable, if there is an \gls{acl} rule denying reading from it for the owner, it is not possible to read from the file. 
 
 % TODO fix example for own tools
 
@@ -1537,6 +1537,7 @@ cat: file: Permission denied
 $ echo hello > file
 $ unlink file
 \end{verbatim}
+There are some caveats with these permissions. The permission restrictions do not apply to the superuser, and it is not possible to deny the owner the permission to change the \gls{acl} by setting \emph{deny writesecurity}. 
 
 % TODO: check how formatting is done in chmod, ls -le
 
