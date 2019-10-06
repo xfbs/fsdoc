@@ -422,7 +422,7 @@ Figure \ref{fig:vfs} shows what a filesystem mounted in another filesystem might
 
 \subsection{Changing Filesystem Root}
 
-The kernel offers the \verb|chroot()| syscall to change the root of the (virtual) filesystem to another folder. This is useful mostly for two reasons. At boot time, the kernel mounts the filesystem into a folder, and then changes into it. The other time this can be useful is as a security precaution: programs can be run in something called a \emph{chroot jail}, which prevents them from accessing any important system files and devices. However, this latter use has been largely replaced by the more-powerful \emph{cgroups} feature, which lets the Kernel fully isolate processes from a system.
+The kernel offers the \verb|chroot()| syscall to change the root of the (virtual) filesystem to another folder. This is useful mostly for two reasons. At boot time, the kernel mounts the filesystem into a folder, and then changes into it. The other time this can be useful is as a security precaution: programs can be run in something called a \emph{chroot jail}, which prevents them from accessing any important system files and devices. However, this latter use has been largely replaced by the more-powerful \emph{cgroups} feature, which lets the kernel fully isolate processes from a system.
 
 \subsection{Filesystem Hiearchy Standard}
 
@@ -776,17 +776,31 @@ Aside from \verb|readlink()|, any operations performed on the symbolic link get 
 
 \subsection{FIFO Queue}
 
-\gls{fifo} queues are a type of special entry provided by the kernel. Unlike regular files, they don't store anything on disk. Rather, they are meant to be used by two processes, one process reading from it and the other writing to it. The data that is written is sent directly between these processes without being sent to disk first. Therefore, \gls{fifo} queues are a kind of \gls{ipc} mechanism.
+\gls{fifo} queues are a type of special entry provided by the kernel. Unlike regular files, they don't store anything on disk. Rather, they are meant to be used by two processes, one process reading from it and the other writing to it. The data that is written is sent directly between these processes without being sent to disk first. Therefore, \gls{fifo} queues can be used as a kind of \gls{ipc} mechanism.
+
+There is a \verb|mkfifo| tool included in this project that can be used to create \gls{fifo} files.
+
+\begin{verbatim}
+$ mkfifo fifo 644  
+\end{verbatim}
+The resulting file can be used like just any other regular file. However, it will block when writing to it unless it is being read at the same time. This can be explored by reading from it in one terminal window, and writing to it in another window, perhaps with the \verb|cat| utility. Or using something like the following, which reads and writes to a file at the same time, to demonstrate \gls{fifo} files.
+
+\begin{verbatim}
+$ echo hi > fifo & cat fifo
+hi
+\end{verbatim}
 
 \subsection{Socket}
 
-Also called \textsc{unix} domain sockets, these are similar to network sockets in that they allow binding (listening for connections) and connecting, but without involving the network stack.
+Also called \textsc{unix} domain sockets, these are similar to network sockets in that they allow binding (listening for connections) and connecting, but without involving the network stack. Unlike all other kinds of files, these are created with the network functions \verb|socket| and \verb|bind|\footnote{See \texttt{man 7 unix} for more information on these.}.
+
+Linux has one special feature, called \emph{abstract sockets}. These are sockets with a path that starts with a \emph{NUL} character. They can be used like regular sockets, but they exist in a separate namespace (meaning that they don't exist on the filesystem). 
 
 \subsection{Character Special File}
 
 Character special files are entries that are handled completely by the kernel. They are identified by a pair of numbers, the minor and major number. Examples of this are \verb|/dev/null| and \verb|/dev/urandom|.
 
-When reading or writing from them, the action that happens depends on their minor and major numbers in the kernel.
+When reading or writing from them, the action that happens depends on their minor and major numbers in the kernel. Character special files have two numbers associated with them, their \emph{major} and \emph{minor} numbers. These are meaningful to the kernel and determine what happens when reading and writing from them. In section \ref{sec:specialfs}, we will examine what these files can be used for.
 
 % list of minor and major device numbers
 % https://www.kernel.org/doc/Documentation/admin-guide/devices.txt
@@ -796,6 +810,34 @@ When reading or writing from them, the action that happens depends on their mino
 A block device is very similar to a character special device, in terms of how it is used and the fact that it, too, is a kind of virtual file. Block devices are also handled completely by the kernel, and are typically used as an interface to hardware. For example, \verb|/dev/sda| is a block device, and is used for communicating to the raw storage of the first hard drive attached to the system. 
 
 The actual difference between block- and character devices lies in the kernel. Character devices are devices that communicate on a byte basis, such as serial ports, whereas block devices communicate with blocks at a time. An example for this would be a hard drive, which has a native block size of, say, four kilobytes. The kernel can request a single block at a time. Therefore, reading from it is most optimal when done blockwise.
+
+\subsection{Hard Link}
+
+Hard links are not a file type. Unlike symbolic links, which exist on the filesystem with a reference (an absolute or relative path) to another file, a hardlink is indistinguishable from the original file. 
+
+On \textsc{unix} systems, multiple filesystem entries can refer to the same backing file (inode). This means that a single file can have multiple names in the filesystem, but regardless which entry is used, the file has the same content, permission and attributes.
+
+The syscall \verb|link()| is used to create hard links of files. Note that there are some filessystems that don't support hard links, such as the \gls{fat} filesystems. The \verb|link| utility in this project can be used to explore hard links on the filesystem.
+
+\begin{verbatim}
+$ mkfile file 644
+$ link file hard_link
+$ echo hi > file
+$ cat hard_link
+hi
+$ echo Patrick | setxattr user.name file
+$ getxattr user.name hard_link
+Patrick
+\end{verbatim}
+As can be seen, despite having different names, the files \emph{file} and \emph{hard\_link} share the same content and attributes. Using the \verb|stat| tool, it can be shown that they both share the same inode number.
+
+\begin{verbatim}
+$ stat file | grep inode
+inode: 774352
+$ stat hard_link | grep inode
+inode: 774352  
+\end{verbatim}
+
 
 \section{Permissions}\label{sec:permissions}
 
@@ -893,6 +935,10 @@ The sticky bit has an effect on directories only. When set, files in the directo
 \section{Quotas}
 
 Quotas allow the system to limit disk usage for certain individuals, groups or, as is the case on Linux, projects. This probably originated back in the time where servers were large and expensive and shared between many users, and were supposed to prevent users from using a disproportionate amount of system resources (disk space).
+
+Linux needs filesystems to be mounted with a special flag (\emph{usrquota}, \emph{grpquota}) in order to recognise and enforce quotas.
+
+% TODO write.
 
 \subsection{User}
 
@@ -1676,7 +1722,7 @@ Linux supports \emph{file leases}, which is a mechanism similar to that of file 
 
 % TODO: example, writeup.
 
-\section{Special Filesystems}
+\section{Special Filesystems}\label{sec:specialfs}
 
 % TODO: introduction, comparison to /dev, justification, some history.
 
