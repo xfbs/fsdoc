@@ -1,15 +1,20 @@
 LATEX	= lualatex
 GLOSSARIES = makeglossaries
 BIBER	= biber
-TOOLS	= perms unlink rmdir mkdir mkfile mksym lssym lsdir stat chmod mknod lsxattr getxattr setxattr
+TOOLS  += mkdir mkfile mksym mknod mkfifo
+TOOLS  += lssym lsdir
+TOOLS  += unlink rmdir
+TOOLS  += lsxattr getxattr setxattr
+TOOLS  += stat perms
+TOOLS  += chmod
 
 ifeq ($(shell uname -s),Darwin)
-	TOOLS += chflags lsflags getacl setacl
+TOOLS += chflags lsflags getacl setacl
 endif
 
 ifeq ($(shell uname -s),Linux)
-	TOOLS += lsattr chattr getcap setcap proccap
-	LDFLAGS += -lcap
+TOOLS += lsattr chattr getcap setcap proccap
+LDFLAGS += -lcap
 endif
 
 all: fsdoc.pdf
