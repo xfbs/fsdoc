@@ -19,7 +19,7 @@ endif
 
 all: fsdoc.pdf
 
-tools: $(TOOLS:%=src/%)
+tools: $(TOOLS:%=tools/%)
 
 fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
@@ -28,10 +28,10 @@ fsdoc.pdf: fsdoc.tex
 	$(LATEX) $<
 	$(LATEX) $<
 
-src/%: src/%.c
+tools/%: tools/%.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
 	$(RM) fsdoc.pdf
 	$(RM) *.aux *.glg *.glo *.log *.ist *.out *.toc *.aux *.gls *.bbl *.bcf *.blg *.run.xml
-	$(RM) $(TOOLS:%=src/%)
+	$(RM) $(TOOLS:%=tools/%)
